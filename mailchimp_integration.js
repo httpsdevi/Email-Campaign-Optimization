@@ -1,540 +1,355 @@
 /**
- * Mailchimp API Integration for Email Campaign Optimization
- * Handles campaign creation, management, and analytics retrieval
+ * Mailchimp API Integration for Email Campaign Funnel Simulation
+ * This module handles communication with Mailchimp API for real campaign management
  */
 
 class MailchimpIntegration {
-    constructor(apiKey, serverPrefix = 'us1') {
+    constructor(apiKey, serverPrefix) {
         this.apiKey = apiKey;
         this.serverPrefix = serverPrefix;
         this.baseUrl = `https://${serverPrefix}.api.mailchimp.com/3.0`;
         this.headers = {
-            'Authorization': `Bearer ${apiKey}`,
+            'Authorization': `apikey ${apiKey}`,
             'Content-Type': 'application/json'
         };
     }
 
     /**
-     * Test API connection and get account information
+     * Get all Mailchimp lists (audiences)
      */
-    async authenticateAndGetAccount() {
+    async getLists() {
         try {
-            const response = await fetch(`${this.baseUrl}/`, {
+            const response = await fetch(`${this.baseUrl}/lists`, {
                 method: 'GET',
                 headers: this.headers
             });
 
             if (!response.ok) {
-                throw new Error(`Authentication failed: ${response.status}`);
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
-
-            const accountData = await response.json();
-            console.log('✅ Mailchimp connection successful');
-            return {
-                success: true,
-                data: {
-                    accountId: accountData.account_id,
-                    accountName: accountData.account_name,
-                    email: accountData.email,
-                    totalSubscribers: accountData.total_subscribers
-                }
-            };
-
-        } catch (error) {
-            console.error('❌ Mailchimp authentication failed:', error);
-            return { success: false, error: error.message };
-        }
-    }
-
-    /**
-     * Get all audience lists
-     */
-    async getAudienceLists() {
-        try {
-            const response = await fetch(`${this.baseUrl}/lists?count=100`, {
-                method: 'GET',
-                headers: this.headers
-            });
 
             const data = await response.json();
-            
-            if (!response.ok) {
-                throw new Error(data.detail || 'Failed to fetch audiences');
-            }
-
-            return {
-                success: true,
-                lists: data.lists.map(list => ({
-                    id: list.id,
-                    name: list.name,
-                    memberCount: list.stats.member_count,
-                    openRate: list.stats.open_rate,
-                    clickRate: list.stats.click_rate
-                }))
-            };
-
+            return data.lists;
         } catch (error) {
-            console.error('❌ Failed to get audience lists:', error);
-            return { success: false, error: error.message };
+            console.error('Error fetching Mailchimp lists:', error);
+            // Return mock data for simulation
+            return this.getMockLists();
         }
     }
 
     /**
-     * Create a new email campaign
+     * Create a new campaign in Mailchimp
      */
     async createCampaign(campaignData) {
         try {
-            const campaign = {
+            const mailchimpCampaign = {
                 type: 'regular',
                 recipients: {
-                    list_id: campaignData.audienceId
+                    list_id: campaignData.listId
                 },
                 settings: {
-                    subject_line: campaignData.subjectLine,
-                    title: campaignData.campaignTitle,
-                    from_name: campaignData.fromName,
-                    reply_to: campaignData.replyTo,
-                    to_name: '*|FNAME|* *|LNAME|*',
-                    template_id: campaignData.templateId || null,
-                    auto_footer: false,
-                    inline_css: true
-                },
-                tracking: {
-                    opens: true,
-                    html_clicks: true,
-                    text_clicks: true,
-                    goal_tracking: true,
-                    ecomm360: false,
-                    google_analytics: campaignData.googleAnalytics || '',
-                    clicktale: ''
+                    subject_line: campaignData.subject,
+                    from_name: campaignData.fromName || 'Your Company',
+                    reply_to: campaignData.replyTo || 'noreply@yourcompany.com',
+                    title: campaignData.name
                 }
             };
-
-            // Add segmentation if provided
-            if (campaignData.segment) {
-                campaign.recipients.segment_opts = campaignData.segment;
-            }
 
             const response = await fetch(`${this.baseUrl}/campaigns`, {
                 method: 'POST',
                 headers: this.headers,
-                body: JSON.stringify(campaign)
+                body: JSON.stringify(mailchimpCampaign)
             });
 
-            const data = await response.json();
-
             if (!response.ok) {
-                throw new Error(data.detail || 'Failed to create campaign');
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            console.log('✅ Campaign created successfully:', data.id);
-            return {
-                success: true,
-                campaignId: data.id,
-                webId: data.web_id,
-                status: data.status,
-                createTime: data.create_time
-            };
+            const campaign = await response.json();
+            
+            // Log to Google Sheets
+            if (window.sheetsTracker) {
+                window.sheetsTracker.logCampaignCreation(campaign.id, campaignData);
+            }
 
+            return campaign;
         } catch (error) {
-            console.error('❌ Failed to create campaign:', error);
-            return { success: false, error: error.message };
+            console.error('Error creating Mailchimp campaign:', error);
+            // Return mock campaign for simulation
+            return this.createMockCampaign(campaignData);
         }
     }
 
     /**
-     * Set campaign content (HTML template)
+     * Set campaign content
      */
-    async setCampaignContent(campaignId, htmlContent) {
+    async setCampaignContent(campaignId, content) {
         try {
-            const content = {
-                html: htmlContent
-            };
-
             const response = await fetch(`${this.baseUrl}/campaigns/${campaignId}/content`, {
                 method: 'PUT',
                 headers: this.headers,
-                body: JSON.stringify(content)
+                body: JSON.stringify({
+                    html: content.html,
+                    plain_text: content.plainText
+                })
             });
 
-            const data = await response.json();
-
             if (!response.ok) {
-                throw new Error(data.detail || 'Failed to set campaign content');
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            console.log('✅ Campaign content updated successfully');
-            return { success: true, data };
-
+            return await response.json();
         } catch (error) {
-            console.error('❌ Failed to set campaign content:', error);
-            return { success: false, error: error.message };
+            console.error('Error setting campaign content:', error);
+            return { status: 'mock_success' };
         }
     }
 
     /**
-     * Send a test email
+     * Send campaign
      */
-    async sendTestEmail(campaignId, testEmails, sendType = 'html') {
+    async sendCampaign(campaignId) {
         try {
-            const testData = {
-                test_emails: Array.isArray(testEmails) ? testEmails : [testEmails],
-                send_type: sendType
-            };
-
-            const response = await fetch(`${this.baseUrl}/campaigns/${campaignId}/actions/test`, {
+            const response = await fetch(`${this.baseUrl}/campaigns/${campaignId}/actions/send`, {
                 method: 'POST',
-                headers: this.headers,
-                body: JSON.stringify(testData)
-            });
-
-            if (!response.ok) {
-                const data = await response.json();
-                throw new Error(data.detail || 'Failed to send test email');
-            }
-
-            console.log('✅ Test email sent successfully');
-            return { success: true };
-
-        } catch (error) {
-            console.error('❌ Failed to send test email:', error);
-            return { success: false, error: error.message };
-        }
-    }
-
-    /**
-     * Schedule or send campaign
-     */
-    async sendCampaign(campaignId, scheduleTime = null) {
-        try {
-            let endpoint = `${this.baseUrl}/campaigns/${campaignId}/actions/send`;
-            let method = 'POST';
-            let body = null;
-
-            // If schedule time is provided, schedule the campaign
-            if (scheduleTime) {
-                endpoint = `${this.baseUrl}/campaigns/${campaignId}/actions/schedule`;
-                body = JSON.stringify({
-                    schedule_time: scheduleTime // ISO 8601 format
-                });
-            }
-
-            const response = await fetch(endpoint, {
-                method,
-                headers: this.headers,
-                body
-            });
-
-            if (!response.ok) {
-                const data = await response.json();
-                throw new Error(data.detail || 'Failed to send/schedule campaign');
-            }
-
-            const action = scheduleTime ? 'scheduled' : 'sent';
-            console.log(`✅ Campaign ${action} successfully`);
-            return { success: true, action };
-
-        } catch (error) {
-            console.error('❌ Failed to send/schedule campaign:', error);
-            return { success: false, error: error.message };
-        }
-    }
-
-    /**
-     * Get campaign analytics/statistics
-     */
-    async getCampaignStats(campaignId) {
-        try {
-            const response = await fetch(`${this.baseUrl}/campaigns/${campaignId}`, {
-                method: 'GET',
                 headers: this.headers
             });
 
-            const data = await response.json();
-
             if (!response.ok) {
-                throw new Error(data.detail || 'Failed to get campaign stats');
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            const stats = data.report_summary || {};
-            
-            return {
-                success: true,
-                campaignInfo: {
-                    id: data.id,
-                    webId: data.web_id,
-                    title: data.settings.title,
-                    subjectLine: data.settings.subject_line,
-                    status: data.status,
-                    sendTime: data.send_time,
-                    createTime: data.create_time
-                },
-                stats: {
-                    emailsSent: stats.emails_sent || 0,
-                    delivered: stats.emails_sent - (stats.bounces?.hard_bounces || 0) - (stats.bounces?.soft_bounces || 0),
-                    opens: stats.opens || 0,
-                    uniqueOpens: stats.unique_opens || 0,
-                    openRate: stats.open_rate || 0,
-                    clicks: stats.clicks || 0,
-                    uniqueClicks: stats.unique_clicks || 0,
-                    clickRate: stats.click_rate || 0,
-                    subscriberClicks: stats.subscriber_clicks || 0,
-                    unsubscribes: stats.unsubscribed || 0,
-                    bounces: stats.bounces?.hard_bounces || 0 + stats.bounces?.soft_bounces || 0
-                }
-            };
+            // Log send action to Google Sheets
+            if (window.sheetsTracker) {
+                window.sheetsTracker.logCampaignSent(campaignId);
+            }
 
+            return { status: 'sent' };
         } catch (error) {
-            console.error('❌ Failed to get campaign stats:', error);
-            return { success: false, error: error.message };
+            console.error('Error sending campaign:', error);
+            return { status: 'mock_sent' };
         }
     }
 
     /**
-     * Get detailed campaign reports
+     * Get campaign reports
      */
-    async getDetailedCampaignReport(campaignId) {
+    async getCampaignReports(campaignId) {
         try {
             const response = await fetch(`${this.baseUrl}/reports/${campaignId}`, {
                 method: 'GET',
                 headers: this.headers
             });
 
-            const data = await response.json();
-
             if (!response.ok) {
-                throw new Error(data.detail || 'Failed to get detailed report');
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            return {
-                success: true,
-                report: {
-                    campaignTitle: data.campaign_title,
-                    emailsSent: data.emails_sent,
-                    delivered: data.emails_sent - data.bounces.hard_bounces - data.bounces.soft_bounces,
-                    deliveryRate: ((data.emails_sent - data.bounces.hard_bounces - data.bounces.soft_bounces) / data.emails_sent * 100).toFixed(2),
-                    opens: data.opens.opens_total,
-                    uniqueOpens: data.opens.unique_opens,
-                    openRate: (data.opens.open_rate * 100).toFixed(2),
-                    clicks: data.clicks.clicks_total,
-                    uniqueClicks: data.clicks.unique_clicks,
-                    clickRate: (data.clicks.click_rate * 100).toFixed(2),
-                    unsubscribes: data.unsubscribed,
-                    bounces: data.bounces.hard_bounces + data.bounces.soft_bounces,
-                    sendTime: data.send_time,
-                    timeseries: data.timeseries || []
-                }
-            };
-
-        } catch (error) {
-            console.error('❌ Failed to get detailed campaign report:', error);
-            return { success: false, error: error.message };
-        }
-    }
-
-    /**
-     * Get click tracking data for campaign
-     */
-    async getClickTrackingData(campaignId) {
-        try {
-            const response = await fetch(`${this.baseUrl}/reports/${campaignId}/click-details`, {
-                method: 'GET',
-                headers: this.headers
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.detail || 'Failed to get click tracking data');
-            }
-
-            return {
-                success: true,
-                clickData: data.urls_clicked.map(url => ({
-                    id: url.id,
-                    url: url.url,
-                    totalClicks: url.total_clicks,
-                    uniqueClicks: url.unique_clicks,
-                    clickPercentage: url.click_percentage
-                }))
-            };
-
-        } catch (error) {
-            console.error('❌ Failed to get click tracking data:', error);
-            return { success: false, error: error.message };
-        }
-    }
-
-    /**
-     * Get all campaigns with basic stats
-     */
-    async getAllCampaigns(count = 50, status = null) {
-        try {
-            let url = `${this.baseUrl}/campaigns?count=${count}&sort_field=create_time&sort_dir=DESC`;
+            const report = await response.json();
             
-            if (status) {
-                url += `&status=${status}`;
-            }
-
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: this.headers
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.detail || 'Failed to get campaigns');
+            // Log metrics to Google Sheets
+            if (window.sheetsTracker) {
+                window.sheetsTracker.logCampaignMetrics(campaignId, report);
             }
 
             return {
-                success: true,
-                campaigns: data.campaigns.map(campaign => ({
-                    id: campaign.id,
-                    webId: campaign.web_id,
-                    title: campaign.settings.title,
-                    subjectLine: campaign.settings.subject_line,
-                    status: campaign.status,
-                    emailsSent: campaign.emails_sent,
-                    sendTime: campaign.send_time,
-                    createTime: campaign.create_time
-                }))
+                opens: report.opens.opens_total,
+                clicks: report.clicks.clicks_total,
+                unsubscribes: report.unsubscribed.unsubscribes,
+                bounces: report.bounces.hard_bounces + report.bounces.soft_bounces,
+                openRate: report.opens.open_rate * 100,
+                clickRate: report.clicks.click_rate * 100
             };
-
         } catch (error) {
-            console.error('❌ Failed to get campaigns:', error);
-            return { success: false, error: error.message };
+            console.error('Error fetching campaign reports:', error);
+            return this.generateMockReports();
         }
     }
 
     /**
-     * Create A/B test campaign
+     * Create automation workflow
      */
-    async createABTestCampaign(testData) {
+    async createAutomation(automationData) {
         try {
-            const campaign = {
-                type: 'variate',
+            const workflow = {
+                type: 'drip',
                 recipients: {
-                    list_id: testData.audienceId
-                },
-                variate_settings: {
-                    winning_criteria: testData.winningCriteria || 'opens', // 'opens', 'clicks', 'manual'
-                    winner_criteria_value: testData.winnerCriteriaValue || 'opens',
-                    wait_time: testData.waitTime || 60, // minutes
-                    test_size: testData.testSize || 25, // percentage
-                    subject_lines: testData.subjectLines // array of subject lines
+                    list_id: automationData.listId,
+                    segment_opts: automationData.segmentOptions
                 },
                 settings: {
-                    title: testData.campaignTitle,
-                    from_name: testData.fromName,
-                    reply_to: testData.replyTo
+                    title: automationData.name,
+                    from_name: automationData.fromName || 'Your Company',
+                    reply_to: automationData.replyTo || 'noreply@yourcompany.com'
+                },
+                trigger_settings: {
+                    workflow_type: 'listSignup'
                 }
             };
 
-            const response = await fetch(`${this.baseUrl}/campaigns`, {
+            const response = await fetch(`${this.baseUrl}/automations`, {
                 method: 'POST',
                 headers: this.headers,
-                body: JSON.stringify(campaign)
+                body: JSON.stringify(workflow)
             });
 
-            const data = await response.json();
-
             if (!response.ok) {
-                throw new Error(data.detail || 'Failed to create A/B test campaign');
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            console.log('✅ A/B test campaign created successfully:', data.id);
-            return {
-                success: true,
-                campaignId: data.id,
-                testSettings: data.variate_settings
+            return await response.json();
+        } catch (error) {
+            console.error('Error creating automation:', error);
+            return this.createMockAutomation(automationData);
+        }
+    }
+
+    /**
+     * Add emails to automation workflow
+     */
+    async addAutomationEmail(workflowId, emailData) {
+        try {
+            const email = {
+                settings: {
+                    subject_line: emailData.subject,
+                    title: emailData.title,
+                    from_name: emailData.fromName || 'Your Company',
+                    reply_to: emailData.replyTo || 'noreply@yourcompany.com'
+                },
+                delay: {
+                    amount: emailData.delayDays,
+                    type: 'day'
+                }
             };
 
+            const response = await fetch(`${this.baseUrl}/automations/${workflowId}/emails`, {
+                method: 'POST',
+                headers: this.headers,
+                body: JSON.stringify(email)
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            return await response.json();
         } catch (error) {
-            console.error('❌ Failed to create A/B test campaign:', error);
-            return { success: false, error: error.message };
+            console.error('Error adding automation email:', error);
+            return { id: 'mock_email_' + Date.now() };
         }
+    }
+
+    /**
+     * Get audience segments
+     */
+    async getSegments(listId) {
+        try {
+            const response = await fetch(`${this.baseUrl}/lists/${listId}/segments`, {
+                method: 'GET',
+                headers: this.headers
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data.segments;
+        } catch (error) {
+            console.error('Error fetching segments:', error);
+            return this.getMockSegments();
+        }
+    }
+
+    // Mock data methods for simulation when API is not available
+    getMockLists() {
+        return [
+            { id: 'mock_list_1', name: 'Main Newsletter', member_count: 2450 },
+            { id: 'mock_list_2', name: 'Prospects', member_count: 1820 },
+            { id: 'mock_list_3', name: 'Customers', member_count: 3670 },
+            { id: 'mock_list_4', name: 'Inactive Users', member_count: 950 }
+        ];
+    }
+
+    createMockCampaign(campaignData) {
+        return {
+            id: 'mock_campaign_' + Date.now(),
+            web_id: Math.floor(Math.random() * 1000000),
+            type: 'regular',
+            create_time: new Date().toISOString(),
+            archive_url: '#',
+            status: 'save',
+            emails_sent: 0,
+            send_time: null,
+            content_type: 'template',
+            settings: {
+                subject_line: campaignData.subject,
+                title: campaignData.name,
+                from_name: campaignData.fromName || 'Your Company',
+                reply_to: campaignData.replyTo || 'noreply@yourcompany.com'
+            }
+        };
+    }
+
+    createMockAutomation(automationData) {
+        return {
+            id: 'mock_automation_' + Date.now(),
+            workflow_id: 'workflow_' + Date.now(),
+            title: automationData.name,
+            status: 'save',
+            emails_sent: 0,
+            create_time: new Date().toISOString()
+        };
+    }
+
+    generateMockReports() {
+        return {
+            opens: Math.floor(Math.random() * 500) + 100,
+            clicks: Math.floor(Math.random() * 100) + 20,
+            unsubscribes: Math.floor(Math.random() * 10) + 1,
+            bounces: Math.floor(Math.random() * 20) + 5,
+            openRate: Math.floor(Math.random() * 30) + 15,
+            clickRate: Math.floor(Math.random() * 8) + 2
+        };
+    }
+
+    getMockSegments() {
+        return [
+            { id: 'seg_1', name: 'New Leads', member_count: 2450 },
+            { id: 'seg_2', name: 'Qualified Prospects', member_count: 1820 },
+            { id: 'seg_3', name: 'Existing Customers', member_count: 3670 },
+            { id: 'seg_4', name: 'Inactive Users', member_count: 950 }
+        ];
+    }
+
+    /**
+     * Sync campaign data with local storage
+     */
+    syncWithLocalData(campaigns) {
+        campaigns.forEach(campaign => {
+            if (campaign.mailchimpId) {
+                this.getCampaignReports(campaign.mailchimpId).then(reports => {
+                    campaign.metrics = {
+                        ...campaign.metrics,
+                        openRate: reports.openRate,
+                        clickRate: reports.clickRate,
+                        leads: reports.clicks
+                    };
+                });
+            }
+        });
     }
 }
 
-// Utility functions
-const MailchimpUtils = {
-    /**
-     * Format campaign data for easy consumption
-     */
-    formatCampaignData(rawData) {
-        return {
-            campaignId: rawData.campaignInfo?.id,
-            title: rawData.campaignInfo?.title,
-            subjectLine: rawData.campaignInfo?.subjectLine,
-            status: rawData.campaignInfo?.status,
-            sendTime: rawData.campaignInfo?.sendTime,
-            emailsSent: rawData.stats?.emailsSent || 0,
-            delivered: rawData.stats?.delivered || 0,
-            opens: rawData.stats?.opens || 0,
-            uniqueOpens: rawData.stats?.uniqueOpens || 0,
-            openRate: ((rawData.stats?.openRate || 0) * 100).toFixed(2),
-            clicks: rawData.stats?.clicks || 0,
-            uniqueClicks: rawData.stats?.uniqueClicks || 0,
-            clickRate: ((rawData.stats?.clickRate || 0) * 100).toFixed(2),
-            unsubscribes: rawData.stats?.unsubscribes || 0,
-            bounces: rawData.stats?.bounces || 0,
-            deliveryRate: rawData.stats?.delivered ? 
-                ((rawData.stats.delivered / rawData.stats.emailsSent) * 100).toFixed(2) : '0'
-        };
-    },
-
-    /**
-     * Calculate performance improvements between campaigns
-     */
-    calculateImprovement(baseline, optimized) {
-        const improvements = {};
-        
-        ['openRate', 'clickRate', 'deliveryRate'].forEach(metric => {
-            const baseValue = parseFloat(baseline[metric]) || 0;
-            const optValue = parseFloat(optimized[metric]) || 0;
-            
-            if (baseValue > 0) {
-                improvements[metric] = {
-                    baseline: baseValue,
-                    optimized: optValue,
-                    improvement: ((optValue - baseValue) / baseValue * 100).toFixed(2),
-                    absolute: (optValue - baseValue).toFixed(2)
-                };
-            }
-        });
-        
-        return improvements;
-    }
-};
+// Initialize Mailchimp integration when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize with demo credentials (replace with real ones)
+    window.mailchimpIntegration = new MailchimpIntegration('demo-api-key', 'us1');
+    
+    console.log('Mailchimp Integration initialized');
+});
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { MailchimpIntegration, MailchimpUtils };
+    module.exports = MailchimpIntegration;
 }
-
-// Example usage:
-/*
-const mailchimp = new MailchimpIntegration('your-api-key', 'us1');
-
-// Test connection
-mailchimp.authenticateAndGetAccount()
-    .then(result => console.log(result));
-
-// Create and send campaign
-async function createAndSendCampaign() {
-    const campaignData = {
-        audienceId: 'your-audience-id',
-        subjectLine: 'Test Campaign Subject',
-        campaignTitle: 'Test Campaign',
-        fromName: 'Your Name',
-        replyTo: 'your-email@domain.com'
-    };
-    
-    const campaign = await mailchimp.createCampaign(campaignData);
-    if (campaign.success) {
-        await mailchimp.setCampaignContent(campaign.campaignId, htmlContent);
-        await mailchimp.sendCampaign(campaign.campaignId);
-    }
-}
-*/
