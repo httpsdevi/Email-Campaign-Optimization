@@ -1,353 +1,469 @@
 /**
- * Google Sheets Integration for Email Campaign Tracking
- * Handles real-time data synchronization and automated reporting
+ * Google Sheets Tracker for Email Campaign Analytics
+ * This module handles logging campaign data to Google Sheets for analysis
  */
 
 class SheetsTracker {
-    constructor(credentials, spreadsheetId) {
-        this.credentials = credentials;
+    constructor(spreadsheetId, apiKey) {
         this.spreadsheetId = spreadsheetId;
-        this.accessToken = null;
+        this.apiKey = apiKey;
         this.baseUrl = 'https://sheets.googleapis.com/v4/spreadsheets';
-        
-        // Sheet names for different data types
-        this.sheets = {
-            campaigns: 'Campaign_Data',
-            analytics: 'Analytics_Dashboard',
-            realtime: 'Realtime_Tracking',
-            summary: 'Performance_Summary'
-        };
+        this.batchData = [];
+        this.batchTimer = null;
+        this.initialized = false;
     }
 
     /**
-     * Authenticate with Google Sheets API using service account
+     * Initialize the tracker and create necessary sheets
      */
-    async authenticate() {
+    async initialize() {
         try {
-            const jwtToken = this.createJWT();
-            
-            const response = await fetch('https://oauth2.googleapis.com/token', {
+            await this.createSheetsIfNotExists();
+            this.initialized = true;
+            console.log('Google Sheets Tracker initialized successfully');
+        } catch (error) {
+            console.error('Error initializing Sheets Tracker:', error);
+            // Continue in offline mode
+            this.initialized = false;
+        }
+    }
+
+    /**
+     * Create necessary sheets if they don't exist
+     */
+    async createSheetsIfNotExists() {
+        const sheetsToCreate = [
+            {
+                name: 'Campaign_Overview',
+                headers: ['Timestamp', 'Campaign_ID', 'Campaign_Name', 'Type', 'Segment', 'Status', 'Email_Count']
+            },
+            {
+                name: 'Campaign_Metrics',
+                headers: ['Timestamp', 'Campaign_ID', 'Open_Rate', 'Click_Rate', 'Conversion_Rate', 'Unsubscribe_Rate', 'Leads_Generated']
+            },
+            {
+                name: 'Email_Performance',
+                headers: ['Timestamp', 'Campaign_ID', 'Email_Index', 'Subject', 'Type', 'Day', 'Opens', 'Clicks', 'Replies']
+            },
+            {
+                name: 'AB_Tests',
+                headers: ['Timestamp', 'Test_ID', 'Subject_A', 'Subject_B', 'Open_Rate_A', 'Open_Rate_B', 'Click_Rate_A', 'Click_Rate_B', 'Winner', 'Sample_Size']
+            },
+            {
+                name: 'User_Actions',
+                headers: ['Timestamp', 'Action_Type', 'Campaign_ID', 'User_Agent', 'Details']
+            }
+        ];
+
+        for (const sheet of sheetsToCreate) {
+            try {
+                await this.createSheet(sheet.name, sheet.headers);
+            } catch (error) {
+                console.warn(`Sheet ${sheet.name} might already exist or error occurred:`, error);
+            }
+        }
+    }
+
+    /**
+     * Create a new sheet with headers
+     */
+    async createSheet(sheetName, headers) {
+        const requests = [
+            {
+                addSheet: {
+                    properties: {
+                        title: sheetName
+                    }
+                }
+            }
+        ];
+
+        try {
+            const response = await fetch(`${this.baseUrl}/${this.spreadsheetId}:batchUpdate?key=${this.apiKey}`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
+                    'Content-Type': 'application/json'
                 },
-                body: new URLSearchParams({
-                    grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-                    assertion: jwtToken
+                body: JSON.stringify({
+                    requests: requests
                 })
             });
 
-            const tokenData = await response.json();
+            if (response.ok) {
+                // Add headers to the new sheet
+                await this.addHeaders(sheetName, headers);
+            }
+        } catch (error) {
+            // Sheet might already exist, try to add headers anyway
+            await this.addHeaders(sheetName, headers);
+        }
+    }
+
+    /**
+     * Add headers to a sheet
+     */
+    async addHeaders(sheetName, headers) {
+        const range = `${sheetName}!A1:${String.fromCharCode(64 + headers.length)}1`;
+        
+        try {
+            await fetch(`${this.baseUrl}/${this.spreadsheetId}/values/${range}?valueInputOption=RAW&key=${this.apiKey}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    values: [headers]
+                })
+            });
+        } catch (error) {
+            console.warn('Error adding headers:', error);
+        }
+    }
+
+    /**
+     * Log campaign creation
+     */
+    async logCampaignCreation(campaignId, campaignData) {
+        const data = [
+            new Date().toISOString(),
+            campaignId,
+            campaignData.name,
+            campaignData.type,
+            campaignData.segment,
+            campaignData.status || 'active',
+            campaignData.emailCount || 5
+        ];
+
+        await this.appendToSheet('Campaign_Overview', data);
+        this.logUserAction('campaign_created', campaignId, JSON.stringify(campaignData));
+    }
+
+    /**
+     * Log campaign metrics
+     */
+    async logCampaignMetrics(campaignId, metrics) {
+        const data = [
+            new Date().toISOString(),
+            campaignId,
+            metrics.openRate || 0,
+            metrics.clickRate || 0,
+            metrics.conversionRate || 0,
+            metrics.unsubscribeRate || 0,
+            metrics.leads || 0
+        ];
+
+        await this.appendToSheet('Campaign_Metrics', data);
+    }
+
+    /**
+     * Log email performance
+     */
+    async logEmailPerformance(campaignId, emailIndex, emailData, performance) {
+        const data = [
+            new Date().toISOString(),
+            campaignId,
+            emailIndex,
+            emailData.subject,
+            emailData.type,
+            emailData.day,
+            performance.opens || 0,
+            performance.clicks || 0,
+            performance.replies || 0
+        ];
+
+        await this.appendToSheet('Email_Performance', data);
+    }
+
+    /**
+     * Log A/B test results
+     */
+    async logABTest(testId, testData) {
+        const data = [
+            new Date().toISOString(),
+            testId,
+            testData.subjectA,
+            testData.subjectB,
+            testData.openRateA,
+            testData.openRateB,
+            testData.clickRateA,
+            testData.clickRateB,
+            testData.winner,
+            testData.sampleSize
+        ];
+
+        await this.appendToSheet('AB_Tests', data);
+        this.logUserAction('ab_test_completed', testId, JSON.stringify(testData));
+    }
+
+    /**
+     * Log user actions
+     */
+    async logUserAction(actionType, campaignId = '', details = '') {
+        const data = [
+            new Date().toISOString(),
+            actionType,
+            campaignId,
+            navigator.userAgent,
+            details
+        ];
+
+        await this.appendToSheet('User_Actions', data);
+    }
+
+    /**
+     * Log campaign sent
+     */
+    async logCampaignSent(campaignId) {
+        this.logUserAction('campaign_sent', campaignId, 'Campaign sent successfully');
+    }
+
+    /**
+     * Append data to a specific sheet
+     */
+    async appendToSheet(sheetName, data) {
+        if (!this.initialized) {
+            // Store in batch for offline mode
+            this.batchData.push({ sheet: sheetName, data: data });
+            return;
+        }
+
+        try {
+            const range = `${sheetName}!A:Z`;
+            const response = await fetch(`${this.baseUrl}/${this.spreadsheetId}/values/${range}:append?valueInputOption=RAW&key=${this.apiKey}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    values: [data]
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+        } catch (error) {
+            console.error('Error appending to sheet:', error);
+            // Store in batch for retry
+            this.batchData.push({ sheet: sheetName, data: data });
+        }
+    }
+
+    /**
+     * Process batched data when connection is restored
+     */
+    async processBatchedData() {
+        if (!this.initialized || this.batchData.length === 0) return;
+
+        console.log(`Processing ${this.batchData.length} batched entries...`);
+
+        for (const entry of this.batchData) {
+            try {
+                await this.appendToSheet(entry.sheet, entry.data);
+            } catch (error) {
+                console.error('Error processing batched data:', error);
+            }
+        }
+
+        this.batchData = [];
+        console.log('Batched data processed successfully');
+    }
+
+    /**
+     * Get campaign analytics from sheets
+     */
+    async getCampaignAnalytics(campaignId = null) {
+        if (!this.initialized) {
+            return this.getMockAnalytics();
+        }
+
+        try {
+            const ranges = [
+                'Campaign_Overview!A:Z',
+                'Campaign_Metrics!A:Z',
+                'Email_Performance!A:Z'
+            ];
+
+            const response = await fetch(`${this.baseUrl}/${this.spreadsheetId}/values:batchGet?ranges=${ranges.join('&ranges=')}&key=${this.apiKey}`);
             
             if (!response.ok) {
-                throw new Error(`Authentication failed: ${tokenData.error_description}`);
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            this.accessToken = tokenData.access_token;
-            console.log('✅ Google Sheets authentication successful');
-            return { success: true };
-
+            const data = await response.json();
+            return this.processAnalyticsData(data.valueRanges, campaignId);
         } catch (error) {
-            console.error('❌ Google Sheets authentication failed:', error);
-            return { success: false, error: error.message };
+            console.error('Error fetching analytics:', error);
+            return this.getMockAnalytics();
         }
     }
 
     /**
-     * Create JWT token for service account authentication
+     * Process analytics data from sheets
      */
-    createJWT() {
-        const header = {
-            alg: 'RS256',
-            typ: 'JWT'
+    processAnalyticsData(ranges, campaignId) {
+        const [overviewData, metricsData, performanceData] = ranges;
+
+        const analytics = {
+            totalCampaigns: 0,
+            avgOpenRate: 0,
+            avgClickRate: 0,
+            totalLeads: 0,
+            campaigns: [],
+            emailPerformance: []
         };
 
-        const now = Math.floor(Date.now() / 1000);
-        const payload = {
-            iss: this.credentials.client_email,
-            scope: 'https://www.googleapis.com/auth/spreadsheets',
-            aud: 'https://oauth2.googleapis.com/token',
-            exp: now + 3600,
-            iat: now
-        };
-
-        // Note: In production, use a proper JWT library for signing
-        // This is a simplified version for demonstration
-        return this.signJWT(header, payload, this.credentials.private_key);
-    }
-
-    /**
-     * Initialize spreadsheet with required sheets and headers
-     */
-    async initializeSpreadsheet() {
-        try {
-            await this.authenticate();
-
-            // Create sheets if they don't exist
-            await this.createSheetsIfNotExist();
+        // Process overview data
+        if (overviewData.values && overviewData.values.length > 1) {
+            const campaigns = overviewData.values.slice(1);
+            analytics.totalCampaigns = campaigns.length;
             
-            // Set up headers for each sheet
-            await this.setupSheetHeaders();
-            
-            console.log('✅ Spreadsheet initialized successfully');
-            return { success: true };
-
-        } catch (error) {
-            console.error('❌ Failed to initialize spreadsheet:', error);
-            return { success: false, error: error.message };
+            if (campaignId) {
+                analytics.campaigns = campaigns.filter(row => row[1] === campaignId);
+            } else {
+                analytics.campaigns = campaigns;
+            }
         }
+
+        // Process metrics data
+        if (metricsData.values && metricsData.values.length > 1) {
+            const metrics = metricsData.values.slice(1);
+            let totalOpenRate = 0;
+            let totalClickRate = 0;
+            let totalLeads = 0;
+
+            metrics.forEach(row => {
+                if (!campaignId || row[1] === campaignId) {
+                    totalOpenRate += parseFloat(row[2]) || 0;
+                    totalClickRate += parseFloat(row[3]) || 0;
+                    totalLeads += parseInt(row[6]) || 0;
+                }
+            });
+
+            const count = campaignId ? metrics.filter(row => row[1] === campaignId).length : metrics.length;
+            analytics.avgOpenRate = count > 0 ? Math.round(totalOpenRate / count) : 0;
+            analytics.avgClickRate = count > 0 ? Math.round(totalClickRate / count) : 0;
+            analytics.totalLeads = totalLeads;
+        }
+
+        // Process email performance data
+        if (performanceData.values && performanceData.values.length > 1) {
+            const performance = performanceData.values.slice(1);
+            analytics.emailPerformance = campaignId 
+                ? performance.filter(row => row[1] === campaignId)
+                : performance;
+        }
+
+        return analytics;
     }
 
     /**
-     * Create required sheets if they don't exist
+     * Generate dashboard report
      */
-    async createSheetsIfNotExist() {
-        const requests = [];
+    async generateDashboardReport() {
+        const analytics = await this.getCampaignAnalytics();
         
-        Object.values(this.sheets).forEach(sheetName => {
-            requests.push({
-                addSheet: {
-                    properties: {
-                        title: sheetName,
-                        gridProperties: {
-                            rowCount: 1000,
-                            columnCount: 20
-                        }
-                    }
-                }
-            });
-        });
-
-        await this.batchUpdate(requests);
-    }
-
-    /**
-     * Set up headers for all sheets
-     */
-    async setupSheetHeaders() {
-        const headers = {
-            [this.sheets.campaigns]: [
-                'Campaign ID', 'Campaign Title', 'Subject Line', 'Send Date', 
-                'Audience Size', 'Emails Sent', 'Delivered', 'Opens', 'Unique Opens',
-                'Clicks', 'Unique Clicks', 'Unsubscribes', 'Open Rate %', 'CTR %', 
-                'Delivery Rate %', 'Status', 'Campaign Type'
-            ],
-            [this.sheets.analytics]: [
-                'Metric', 'Campaign A', 'Campaign B', 'Improvement %', 'Last Updated'
-            ],
-            [this.sheets.realtime]: [
-                'Timestamp', 'Event Type', 'Campaign ID', 'Email Address', 
-                'URL Clicked', 'Device Type', 'Location', 'User Agent'
-            ],
-            [this.sheets.summary]: [
-                'Date', 'Total Campaigns', 'Total Emails Sent', 'Avg Open Rate',
-                'Avg CTR', 'Total Conversions', 'Best Performing Campaign'
-            ]
+        return {
+            summary: {
+                totalCampaigns: analytics.totalCampaigns,
+                avgOpenRate: analytics.avgOpenRate,
+                avgClickRate: analytics.avgClickRate,
+                totalLeads: analytics.totalLeads
+            },
+            topPerformingCampaigns: this.getTopPerformers(analytics.campaigns),
+            emailPerformance: analytics.emailPerformance.slice(0, 10) // Top 10
         };
-
-        for (const [sheetName, headerRow] of Object.entries(headers)) {
-            await this.updateRange(`${sheetName}!A1:${this.getColumnLetter(headerRow.length)}1`, [headerRow]);
-        }
     }
 
     /**
-     * Add new campaign data to tracking sheet
+     * Get top performing campaigns
      */
-    async addCampaignData(campaignData) {
+    getTopPerformers(campaigns) {
+        return campaigns
+            .sort((a, b) => (parseFloat(b[2]) || 0) - (parseFloat(a[2]) || 0)) // Sort by open rate
+            .slice(0, 5)
+            .map(campaign => ({
+                name: campaign[2],
+                type: campaign[3],
+                openRate: parseFloat(campaign[2]) || 0
+            }));
+    }
+
+    /**
+     * Export data to CSV
+     */
+    async exportToCsv(sheetName) {
         try {
-            await this.authenticate();
-
-            const row = [
-                campaignData.campaignId,
-                campaignData.title,
-                campaignData.subjectLine,
-                campaignData.sendTime,
-                campaignData.audienceSize || '',
-                campaignData.emailsSent || 0,
-                campaignData.delivered || 0,
-                campaignData.opens || 0,
-                campaignData.uniqueOpens || 0,
-                campaignData.clicks || 0,
-                campaignData.uniqueClicks || 0,
-                campaignData.unsubscribes || 0,
-                campaignData.openRate || 0,
-                campaignData.clickRate || 0,
-                campaignData.deliveryRate || 0,
-                campaignData.status || 'sent',
-                campaignData.campaignType || 'regular'
-            ];
-
-            const result = await this.appendRow(this.sheets.campaigns, row);
+            const range = `${sheetName}!A:Z`;
+            const response = await fetch(`${this.baseUrl}/${this.spreadsheetId}/values/${range}?key=${this.apiKey}`);
             
-            if (result.success) {
-                console.log('✅ Campaign data added to sheet');
-                // Update summary statistics
-                await this.updateSummaryStats();
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            return result;
-
+            const data = await response.json();
+            const csv = this.convertToCSV(data.values);
+            
+            // Download CSV
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${sheetName}_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
         } catch (error) {
-            console.error('❌ Failed to add campaign data:', error);
-            return { success: false, error: error.message };
+            console.error('Error exporting to CSV:', error);
         }
     }
 
     /**
-     * Update existing campaign data
+     * Convert array data to CSV format
      */
-    async updateCampaignData(campaignId, updatedData) {
-        try {
-            await this.authenticate();
-
-            // Find the row with matching campaign ID
-            const campaignSheet = await this.getSheetData(this.sheets.campaigns);
-            const campaignRowIndex = campaignSheet.findIndex(row => row[0] === campaignId);
-
-            if (campaignRowIndex === -1) {
-                throw new Error(`Campaign ${campaignId} not found`);
-            }
-
-            // Update specific fields
-            const updatePromises = [];
-            const fieldMapping = {
-                emailsSent: 5, delivered: 6, opens: 7, uniqueOpens: 8,
-                clicks: 9, uniqueClicks: 10, unsubscribes: 11,
-                openRate: 12, clickRate: 13, deliveryRate: 14, status: 15
-            };
-
-            Object.entries(updatedData).forEach(([field, value]) => {
-                if (fieldMapping[field] !== undefined) {
-                    const column = this.getColumnLetter(fieldMapping[field] + 1);
-                    const range = `${this.sheets.campaigns}!${column}${campaignRowIndex + 2}`;
-                    updatePromises.push(this.updateRange(range, [[value]]));
-                }
-            });
-
-            await Promise.all(updatePromises);
-            
-            console.log('✅ Campaign data updated');
-            await this.updateSummaryStats();
-            
-            return { success: true };
-
-        } catch (error) {
-            console.error('❌ Failed to update campaign data:', error);
-            return { success: false, error: error.message };
-        }
+    convertToCSV(data) {
+        return data.map(row => 
+            row.map(cell => `"${cell}"`).join(',')
+        ).join('\n');
     }
 
     /**
-     * Log real-time engagement events
+     * Mock analytics for offline mode
      */
-    async logEngagementEvent(eventData) {
-        try {
-            const row = [
-                new Date().toISOString(),
-                eventData.eventType, // 'open', 'click', 'unsubscribe'
-                eventData.campaignId,
-                eventData.email || '',
-                eventData.url || '',
-                eventData.deviceType || '',
-                eventData.location || '',
-                eventData.userAgent || ''
-            ];
-
-            const result = await this.appendRow(this.sheets.realtime, row);
-            
-            if (result.success) {
-                // Update campaign totals in real-time
-                await this.updateCampaignTotals(eventData.campaignId, eventData.eventType);
-            }
-
-            return result;
-
-        } catch (error) {
-            console.error('❌ Failed to log engagement event:', error);
-            return { success: false, error: error.message };
-        }
+    getMockAnalytics() {
+        return {
+            totalCampaigns: 5,
+            avgOpenRate: 25,
+            avgClickRate: 4,
+            totalLeads: 150,
+            campaigns: [],
+            emailPerformance: []
+        };
     }
 
     /**
-     * Update campaign totals based on real-time events
+     * Schedule automatic data sync
      */
-    async updateCampaignTotals(campaignId, eventType) {
-        try {
-            const campaignData = await this.getCampaignData(campaignId);
-            if (!campaignData) return;
-
-            const updates = {};
-            
-            switch (eventType) {
-                case 'open':
-                    updates.opens = (campaignData.opens || 0) + 1;
-                    updates.openRate = ((updates.opens / campaignData.emailsSent) * 100).toFixed(2);
-                    break;
-                case 'click':
-                    updates.clicks = (campaignData.clicks || 0) + 1;
-                    updates.clickRate = ((updates.clicks / campaignData.emailsSent) * 100).toFixed(2);
-                    break;
-                case 'unsubscribe':
-                    updates.unsubscribes = (campaignData.unsubscribes || 0) + 1;
-                    break;
-            }
-
-            if (Object.keys(updates).length > 0) {
-                await this.updateCampaignData(campaignId, updates);
-            }
-
-        } catch (error) {
-            console.error('❌ Failed to update campaign totals:', error);
-        }
+    startAutoSync(intervalMinutes = 5) {
+        setInterval(() => {
+            this.processBatchedData();
+        }, intervalMinutes * 60 * 1000);
     }
+}
 
-    /**
-     * Create A/B test comparison analysis
-     */
-    async createABTestAnalysis(campaignAData, campaignBData) {
-        try {
-            await this.authenticate();
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize with demo credentials (replace with real ones)
+    window.sheetsTracker = new SheetsTracker('demo-spreadsheet-id', 'demo-api-key');
+    
+    // Initialize the tracker
+    window.sheetsTracker.initialize().then(() => {
+        console.log('Google Sheets Tracker ready');
+        // Start auto-sync every 5 minutes
+        window.sheetsTracker.startAutoSync(5);
+    });
+});
 
-            const analysisData = [
-                ['Metric', 'Campaign A', 'Campaign B', 'Improvement %', 'Last Updated'],
-                [
-                    'Open Rate',
-                    `${campaignAData.openRate}%`,
-                    `${campaignBData.openRate}%`,
-                    this.calculateImprovement(campaignAData.openRate, campaignBData.openRate),
-                    new Date().toISOString()
-                ],
-                [
-                    'Click-Through Rate',
-                    `${campaignAData.clickRate}%`,
-                    `${campaignBData.clickRate}%`,
-                    this.calculateImprovement(campaignAData.clickRate, campaignBData.clickRate),
-                    new Date().toISOString()
-                ],
-                [
-                    'Delivery Rate',
-                    `${campaignAData.deliveryRate}%`,
-                    `${campaignBData.deliveryRate}%`,
-                    this.calculateImprovement(campaignAData.deliveryRate, campaignBData.deliveryRate),
-                    new Date().toISOString()
-                ],
-                [
-                    'Total Opens',
-                    campaignAData.opens,
-                    campaignBData.opens,
-                    this.calculateImprovement(campaignAData.opens, campaignBData.opens),
-                    new Date().toISOString()
-                ],
-                [
-                    'Total Clicks',
-                    campaignAData.clicks,
-                    campaignBData.clicks,
-                    this.calculateImprovement(campaignAData.clicks, campaignBData.clicks),
-                    new Date().toISOString()
-                ]
-            ];
-
-            await this.updateRange(`${this.sheets.analytics}!A1:E6`, analysisData);
-            
-            console.log('✅ A/B test analysis created');
-            return { success: true, analysis: analys
+// Export for use in other modules
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = SheetsTracker;
+}
