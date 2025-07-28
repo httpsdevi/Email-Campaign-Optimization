@@ -3,1348 +3,495 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Email Campaign Funnel Simulation</title>
+    <title>Email Campaign Optimization Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN for interactive charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            color: #333;
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Light gray background */
         }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
+        .card {
+            background-color: #ffffff;
+            border-radius: 0.75rem; /* rounded-xl */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* shadow-md */
+            padding: 1.5rem; /* p-6 */
+            transition: transform 0.2s ease-in-out;
         }
-
-        h1 {
-            text-align: center;
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        .tab-button {
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        .tab-button.active {
+            background-color: #1d4ed8; /* blue-700 */
             color: white;
-            margin-bottom: 30px;
-            font-size: 2.5rem;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            border-radius: 0.75rem 0.75rem 0 0; /* rounded-t-xl */
         }
-
-        .dashboard {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .panel {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            backdrop-filter: blur(10px);
-        }
-
-        .panel h2 {
-            color: #667eea;
-            margin-bottom: 20px;
-            font-size: 1.5rem;
-            border-bottom: 2px solid #667eea;
-            padding-bottom: 10px;
-        }
-
-        .campaign-builder {
-            grid-column: span 2;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 600;
-            color: #555;
-        }
-
-        input, select, textarea {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e1e1e1;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.3s ease;
-        }
-
-        input:focus, select:focus, textarea:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 10px rgba(102, 126, 234, 0.2);
-        }
-
-        .btn {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: 600;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-            margin: 5px;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .btn-secondary {
-            background: linear-gradient(45deg, #95e1d3, #4facfe);
-        }
-
-        .btn-danger {
-            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
-        }
-
-        .campaigns-list {
-            margin-top: 20px;
-        }
-
-        .campaign-item {
-            background: #f8f9ff;
-            border: 1px solid #e1e5ff;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 15px;
-            transition: all 0.3s ease;
-        }
-
-        .campaign-item:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-        }
-
-        .campaign-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .campaign-title {
-            font-weight: 600;
-            color: #667eea;
-            font-size: 1.1rem;
-        }
-
-        .campaign-status {
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .status-active {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .status-paused {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .status-completed {
-            background: #cce7ff;
-            color: #004085;
-        }
-
-        .status-sent {
-            background: #d1ecf1;
-            color: #0c5460;
-        }
-
-        .analytics-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
-        }
-
-        .metric-card {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-            transform: perspective(1000px) rotateX(0deg);
-            transition: transform 0.3s ease;
-        }
-
-        .metric-card:hover {
-            transform: perspective(1000px) rotateX(5deg) translateY(-5px);
-        }
-
-        .metric-value {
-            font-size: 2rem;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .metric-label {
-            font-size: 0.9rem;
-            opacity: 0.9;
-        }
-
-        .audience-segments {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
-        }
-
-        .segment-card {
-            background: linear-gradient(135deg, #95e1d3, #4facfe);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-        }
-
-        .segment-size {
-            font-size: 1.5rem;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .email-preview {
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 10px;
-            padding: 20px;
-            margin-top: 15px;
-        }
-
-        .email-header {
-            border-bottom: 1px solid #dee2e6;
-            padding-bottom: 10px;
-            margin-bottom: 15px;
-        }
-
-        .subject-line {
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 5px;
-        }
-
-        .from-line {
-            color: #666;
-            font-size: 0.9rem;
-        }
-
-        .progress-bar {
-            background: #e9ecef;
-            border-radius: 10px;
-            height: 8px;
-            margin: 10px 0;
-            overflow: hidden;
-        }
-
-        .progress-fill {
-            background: linear-gradient(90deg, #667eea, #764ba2);
-            height: 100%;
-            border-radius: 10px;
-            transition: width 0.5s ease;
-        }
-
-        .drip-sequence {
-            margin-top: 20px;
-        }
-
-        .drip-email {
-            background: white;
-            border: 1px solid #e1e5ff;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 10px;
-            position: relative;
-            transition: all 0.3s ease;
-        }
-
-        .drip-email:hover {
-            box-shadow: 0 3px 15px rgba(0,0,0,0.1);
-        }
-
-        .drip-day {
-            position: absolute;
-            top: -5px;
-            left: 15px;
-            background: #667eea;
-            color: white;
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-
-        .modal {
+        .tab-content {
             display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-            backdrop-filter: blur(5px);
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
         }
-
-        .modal-content {
-            background-color: white;
-            margin: 5% auto;
-            padding: 30px;
-            border-radius: 15px;
-            width: 80%;
-            max-width: 600px;
-            max-height: 80vh;
-            overflow-y: auto;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        .tab-content.active {
+            display: block;
+            opacity: 1;
         }
-
-        .close {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: color 0.3s ease;
+        /* Custom scrollbar for better UX */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
         }
-
-        .close:hover {
-            color: #667eea;
-        }
-
-        .test-results {
-            margin-top: 20px;
-            padding: 15px;
-            background: #f8f9ff;
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
             border-radius: 10px;
-            border-left: 4px solid #667eea;
         }
-
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 20px;
+        ::-webkit-scrollbar-thumb {
+            background: #888;
             border-radius: 10px;
-            color: white;
-            font-weight: 600;
-            z-index: 1001;
-            transform: translateX(400px);
-            transition: transform 0.3s ease;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
         }
 
-        .notification.show {
-            transform: translateX(0);
-        }
-
-        .notification.success {
-            background: linear-gradient(45deg, #28a745, #20c997);
-        }
-
-        .notification.error {
-            background: linear-gradient(45deg, #dc3545, #c82333);
-        }
-
-        .loading-spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
+        /* Loading Spinner */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
             border-radius: 50%;
+            width: 30px;
+            height: 30px;
             animation: spin 1s linear infinite;
-            margin-right: 10px;
+            display: none; /* Hidden by default */
+        }
+
+        .loader.active {
+            display: block;
         }
 
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-
-        .integration-status {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 20px;
-            color: white;
-        }
-
-        .status-indicator {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-
-        .status-connected {
-            background: #28a745;
-        }
-
-        .status-disconnected {
-            background: #dc3545;
-        }
-
-        @media (max-width: 768px) {
-            .dashboard {
-                grid-template-columns: 1fr;
-            }
-            
-            .campaign-builder {
-                grid-column: span 1;
-            }
-            
-            h1 {
-                font-size: 2rem;
-            }
-        }
-
-        .fade-in {
-            animation: fadeIn 0.5s ease-in;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .pulse {
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-
-        .export-panel {
-            margin-top: 20px;
-            padding: 15px;
-            background: #f8f9ff;
-            border-radius: 10px;
-            border-left: 4px solid #667eea;
-        }
     </style>
 </head>
-<body>
-    <div class="container">
-        <h1>📧 Email Campaign Funnel Simulation</h1>
-        
-        <div class="integration-status">
-            <div>
-                <span class="status-indicator" id="mailchimpStatus"></span>
-                Mailchimp Integration: <span id="mailchimpStatusText">Connecting...</span>
-            </div>
-            <div style="margin-top: 5px;">
-                <span class="status-indicator" id="sheetsStatus"></span>
-                Google Sheets Tracker: <span id="sheetsStatusText">Connecting...</span>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-6 shadow-lg">
+        <div class="container mx-auto flex items-center justify-between">
+            <h1 class="text-3xl font-bold">Email Campaign Dashboard</h1>
+            <nav>
+                <ul class="flex space-x-6">
+                    <li><a href="#" class="hover:text-blue-200 transition duration-300">Overview</a></li>
+                    <li><a href="#" class="hover:text-blue-200 transition duration-300">A/B Tests</a></li>
+                    <li><a href="#" class="hover:text-blue-200 transition duration-300">Segments</a></li>
+                    <li><a href="#" class="hover:text-blue-200 transition duration-300">Settings</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="container mx-auto p-6 flex-grow">
+        <!-- Date Range Filter -->
+        <div class="card mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
+            <h2 class="text-xl font-semibold text-gray-800">Filter Data by Date Range:</h2>
+            <div class="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+                <div class="flex items-center gap-2">
+                    <label for="startDate" class="text-gray-700">From:</label>
+                    <input type="date" id="startDate" class="p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div class="flex items-center gap-2">
+                    <label for="endDate" class="text-gray-700">To:</label>
+                    <input type="date" id="endDate" class="p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <button id="applyFilterBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 ease-in-out transform hover:scale-105">
+                    Apply Filter
+                </button>
             </div>
         </div>
-        
-        <div class="dashboard">
-            <div class="panel campaign-builder">
-                <h2>Campaign Builder</h2>
-                <form id="campaignForm">
-                    <div class="form-group">
-                        <label for="campaignName">Campaign Name</label>
-                        <input type="text" id="campaignName" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="campaignType">Campaign Type</label>
-                        <select id="campaignType" required>
-                            <option value="">Select Type</option>
-                            <option value="welcome">Welcome Series</option>
-                            <option value="nurture">Lead Nurturing</option>
-                            <option value="product">Product Showcase</option>
-                            <option value="retention">Customer Retention</option>
-                            <option value="reengagement">Re-engagement</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="audienceSegment">Target Audience</label>
-                        <select id="audienceSegment" required>
-                            <option value="">Loading audiences...</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="emailCount">Number of Emails</label>
-                        <select id="emailCount">
-                            <option value="3">3 Emails</option>
-                            <option value="5" selected>5 Emails</option>
-                            <option value="7">7 Emails</option>
-                        </select>
-                    </div>
 
-                    <div class="form-group">
-                        <label for="fromName">From Name</label>
-                        <input type="text" id="fromName" value="Your Company">
-                    </div>
+        <!-- Loading Indicator -->
+        <div id="loadingIndicator" class="flex justify-center items-center py-8 hidden">
+            <div class="loader active mr-3"></div>
+            <p class="text-lg text-gray-700">Loading data, please wait...</p>
+        </div>
 
-                    <div class="form-group">
-                        <label for="replyTo">Reply To Email</label>
-                        <input type="email" id="replyTo" value="noreply@yourcompany.com">
+        <div id="dashboardContent" class="hidden">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <!-- KPI Cards -->
+                <div class="card flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Total Emails Sent</p>
+                        <p class="text-3xl font-bold text-gray-800" id="totalEmails">0</p>
                     </div>
-                    
-                    <button type="submit" class="btn" id="createCampaignBtn">Create Campaign</button>
-                    <button type="button" class="btn btn-secondary" onclick="openABTestModal()">A/B Test Subject Lines</button>
-                </form>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                </div>
+                <div class="card flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Open Rate</p>
+                        <p class="text-3xl font-bold text-gray-800" id="openRate">0.00%</p>
+                    </div>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                </div>
+                <div class="card flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Conversion Rate</p>
+                        <p class="text-3xl font-bold text-gray-800" id="conversionRate">0.00%</p>
+                    </div>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
             </div>
-            
-            <div class="panel">
-                <h2>Campaign Analytics</h2>
-                <div class="analytics-grid">
-                    <div class="metric-card">
-                        <div class="metric-value" id="totalCampaigns">0</div>
-                        <div class="metric-label">Active Campaigns</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value" id="avgOpenRate">0%</div>
-                        <div class="metric-label">Avg Open Rate</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value" id="avgClickRate">0%</div>
-                        <div class="metric-label">Avg Click Rate</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value" id="totalLeads">0</div>
-                        <div class="metric-label">Leads Generated</div>
+
+            <!-- Tabs for different sections -->
+            <div class="bg-white rounded-xl shadow-md p-4 mb-6">
+                <div class="flex border-b border-gray-200">
+                    <button class="tab-button active px-6 py-3 text-lg font-medium text-gray-700 hover:bg-blue-100 transition duration-300" data-tab="overview">Overview</button>
+                    <button class="tab-button px-6 py-3 text-lg font-medium text-gray-700 hover:bg-blue-100 transition duration-300" data-tab="ab-tests">A/B Tests</button>
+                    <button class="tab-button px-6 py-3 text-lg font-medium text-gray-700 hover:bg-blue-100 transition duration-300" data-tab="segments">Segments</button>
+                </div>
+
+                <!-- Tab Content -->
+                <div id="overview" class="tab-content active pt-4">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-4">Overall Campaign Performance</h2>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="card">
+                            <h3 class="text-xl font-medium mb-4">Open Rate by Subject Line Version</h3>
+                            <canvas id="openRateChart" class="w-full h-auto rounded-lg"></canvas>
+                            <p class="text-sm text-gray-500 mt-2">This chart visualizes the open rates for different subject line variations, helping identify which performs best.</p>
+                        </div>
+                        <div class="card">
+                            <h3 class="text-xl font-medium mb-4">Conversion Rate by User Segment</h3>
+                            <canvas id="conversionRateChart" class="w-full h-auto rounded-lg"></canvas>
+                            <p class="text-sm text-gray-500 mt-2">Understand how different user segments respond to your campaigns by analyzing their conversion rates.</p>
+                        </div>
                     </div>
                 </div>
 
-                <div class="export-panel">
-                    <button class="btn btn-secondary" onclick="exportAnalytics()">Export Analytics</button>
-                    <button class="btn btn-secondary" onclick="refreshAnalytics()">Refresh Data</button>
+                <div id="ab-tests" class="tab-content pt-4">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-4">A/B Test Results</h2>
+                    <div class="card">
+                        <h3 class="text-xl font-medium mb-4">Subject Line A/B Test: Conversion Rate</h3>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Version</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Emails Sent</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Conversions</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Conversion Rate (%)</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Version A: Exciting Offer!</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" id="abTestSentA">0</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" id="abTestConversionsA">0</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" id="abTestRateA">0.00%</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Version B: Don't Miss Out!</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" id="abTestSentB">0</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" id="abTestConversionsB">0</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" id="abTestRateB">0.00%</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mt-4 p-4 rounded-lg bg-blue-50 border border-blue-200 text-blue-800" id="abTestConclusion">
+                            <p class="font-semibold">Conclusion:</p>
+                            <p>Loading A/B test results...</p>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            
-            <div class="panel">
-                <h2>Audience Segments</h2>
-                <div class="audience-segments" id="audienceSegments">
+
+                <div id="segments" class="tab-content pt-4">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-4">Performance by User Segment</h2>
+                    <div class="card">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Segment</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Emails Sent</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Open Rate (%)</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Click Rate (%)</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Conversion Rate (%)</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue per Email ($)</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200" id="segmentTableBody">
+                                    <!-- Data will be populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-            </div>
-            
-            <div class="panel">
-                <h2>Campaign Management</h2>
-                <div id="campaignsList" class="campaigns-list">
-                    </div>
+                </div>
             </div>
         </div>
-    </div>
+    </main>
 
-    <div id="abTestModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeABTestModal()">&times;</span>
-            <h2>A/B Test Subject Lines</h2>
-            <form id="abTestForm">
-                <div class="form-group">
-                    <label for="subjectA">Subject Line A</label>
-                    <input type="text" id="subjectA" placeholder="e.g., Unlock Your Business Potential Today!">
-                </div>
-                <div class="form-group">
-                    <label for="subjectB">Subject Line B</label>
-                    <input type="text" id="subjectB" placeholder="e.g., 5 Strategies to Boost Your Revenue">
-                </div>
-                <div class="form-group">
-                    <label for="testSize">Test Sample Size (%)</label>
-                    <select id="testSize">
-                        <option value="10">10%</option>
-                        <option value="20" selected>20%</option>
-                        <option value="30">30%</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn">Run A/B Test</button>
-            </form>
-            <div id="testResults" class="test-results" style="display: none;">
-                </div>
-        </div>
-    </div>
-
-    <div id="notification" class="notification"></div>
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white p-4 text-center text-sm mt-8">
+        <p>&copy; 2025 Email Campaign Optimizer. All rights reserved.</p>
+    </footer>
 
     <script>
-        // MailchimpIntegration class (inline for artifact)
-        class MailchimpIntegration {
-            constructor(apiKey, serverPrefix) {
-                this.apiKey = apiKey;
-                this.serverPrefix = serverPrefix;
-                this.baseUrl = `https://${serverPrefix}.api.mailchimp.com/3.0`;
-                this.headers = {
-                    'Authorization': `apikey ${apiKey}`,
-                    'Content-Type': 'application/json'
-                };
-            }
+        // Global Chart instances
+        let openRateChartInstance = null;
+        let conversionRateChartInstance = null;
 
-            async getLists() {
-                try {
-                    const response = await fetch(`${this.baseUrl}/lists`, {
-                        method: 'GET',
-                        headers: this.headers
-                    });
+        document.addEventListener('DOMContentLoaded', () => {
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const dashboardContent = document.getElementById('dashboardContent');
+            const startDateInput = document.getElementById('startDate');
+            const endDateInput = document.getElementById('endDate');
+            const applyFilterBtn = document.getElementById('applyFilterBtn');
 
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
+            // Set default date range (e.g., last 60 days)
+            const today = new Date();
+            const sixtyDaysAgo = new Date();
+            sixtyDaysAgo.setDate(today.getDate() - 60);
 
-                    const data = await response.json();
-                    return data.lists;
-                } catch (error) {
-                    console.error('Error fetching Mailchimp lists:', error);
-                    return this.getMockLists();
+            startDateInput.value = sixtyDaysAgo.toISOString().split('T')[0];
+            endDateInput.value = today.toISOString().split('T')[0];
+
+            // --- Tab Switching Logic ---
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    tabContents.forEach(content => content.classList.remove('active'));
+
+                    button.classList.add('active');
+                    const targetTab = button.dataset.tab;
+                    document.getElementById(targetTab).classList.add('active');
+                });
+            });
+
+            // --- Chart Initialization Functions ---
+            function createOpenRateChart(labels, data) {
+                const ctx = document.getElementById('openRateChart').getContext('2d');
+                if (openRateChartInstance) {
+                    openRateChartInstance.destroy(); // Destroy previous instance if it exists
                 }
-            }
-
-            async createCampaign(campaignData) {
-                try {
-                    const mailchimpCampaign = {
-                        type: 'regular',
-                        recipients: {
-                            list_id: campaignData.listId
+                openRateChartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Open Rate (%)',
+                            data: data,
+                            backgroundColor: ['rgba(59, 130, 246, 0.7)', 'rgba(79, 70, 229, 0.7)'], // blue-500, indigo-500
+                            borderColor: ['rgba(59, 130, 246, 1)', 'rgba(79, 70, 229, 1)'],
+                            borderWidth: 1,
+                            borderRadius: 8,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false,
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `${context.dataset.label}: ${context.raw.toFixed(2)}%`;
+                                    }
+                                }
+                            }
                         },
-                        settings: {
-                            subject_line: campaignData.subject,
-                            from_name: campaignData.fromName || 'Your Company',
-                            reply_to: campaignData.replyTo || 'noreply@yourcompany.com',
-                            title: campaignData.name
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Open Rate (%)'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Subject Line Version'
+                                }
+                            }
                         }
+                    }
+                });
+            }
+
+            function createConversionRateChart(labels, data) {
+                const ctx = document.getElementById('conversionRateChart').getContext('2d');
+                if (conversionRateChartInstance) {
+                    conversionRateChartInstance.destroy(); // Destroy previous instance if it exists
+                }
+                conversionRateChartInstance = new Chart(ctx, {
+                    type: 'pie', // Using pie chart for segments
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Conversion Rate (%)',
+                            data: data,
+                            backgroundColor: [
+                                'rgba(16, 185, 129, 0.7)', // green-500
+                                'rgba(245, 158, 11, 0.7)',  // yellow-500
+                                'rgba(139, 92, 246, 0.7)'   // purple-500
+                            ],
+                            borderColor: [
+                                'rgba(16, 185, 129, 1)',
+                                'rgba(245, 158, 11, 1)',
+                                'rgba(139, 92, 246, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.label || '';
+                                        const value = context.raw;
+                                        return `${label}: ${value.toFixed(2)}%`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // --- Simulate Data Fetching and Population ---
+            function fetchDataAndRenderDashboard(startDate, endDate) {
+                loadingIndicator.classList.remove('hidden');
+                dashboardContent.classList.add('hidden');
+
+                // Simulate API call delay
+                setTimeout(() => {
+                    // Mock data - In a real app, this would be fetched from your Python backend
+                    const mockOverallKPIs = {
+                        'Total Emails Sent': (Math.random() * 5000 + 5000).toFixed(0), // Varies based on date range
+                        'Open Rate (%)': (Math.random() * 10 + 25).toFixed(2),
+                        'Conversion Rate (%)': (Math.random() * 2 + 4).toFixed(2),
+                        'Total Revenue': (Math.random() * 1000 + 1000).toFixed(2),
+                        'Revenue per Email': (Math.random() * 0.1 + 0.1).toFixed(2)
                     };
 
-                    const response = await fetch(`${this.baseUrl}/campaigns`, {
-                        method: 'POST',
-                        headers: this.headers,
-                        body: JSON.stringify(mailchimpCampaign)
-                    });
-
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-
-                    const campaign = await response.json();
-                    
-                    if (window.sheetsTracker) {
-                        window.sheetsTracker.logCampaignCreation(campaign.id, campaignData);
-                    }
-
-                    return campaign;
-                } catch (error) {
-                    console.error('Error creating Mailchimp campaign:', error);
-                    return this.createMockCampaign(campaignData);
-                }
-            }
-
-            async sendCampaign(campaignId) {
-                try {
-                    const response = await fetch(`${this.baseUrl}/campaigns/${campaignId}/actions/send`, {
-                        method: 'POST',
-                        headers: this.headers
-                    });
-
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-
-                    if (window.sheetsTracker) {
-                        window.sheetsTracker.logCampaignSent(campaignId);
-                    }
-
-                    return { status: 'sent' };
-                } catch (error) {
-                    console.error('Error sending campaign:', error);
-                    return { status: 'mock_sent' };
-                }
-            }
-
-            async getCampaignReports(campaignId) {
-                try {
-                    const response = await fetch(`${this.baseUrl}/reports/${campaignId}`, {
-                        method: 'GET',
-                        headers: this.headers
-                    });
-
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-
-                    const report = await response.json();
-                    
-                    if (window.sheetsTracker) {
-                        window.sheetsTracker.logCampaignMetrics(campaignId, report);
-                    }
-
-                    return {
-                        opens: report.opens.opens_total,
-                        clicks: report.clicks.clicks_total,
-                        unsubscribes: report.unsubscribed.unsubscribes,
-                        bounces: report.bounces.hard_bounces + report.bounces.soft_bounces,
-                        openRate: report.opens.open_rate * 100,
-                        clickRate: report.clicks.click_rate * 100
+                    const mockABTestResults = {
+                        'version_A': 'Version A: Exciting Offer!',
+                        'success_A': Math.floor(Math.random() * 200 + 200),
+                        'total_A': 5000,
+                        'version_B': 'Version B: Don\'t Miss Out!',
+                        'success_B': Math.floor(Math.random() * 200 + 250), // B often slightly better
+                        'total_B': 5000,
+                        'p_value': Math.random() < 0.7 ? 0.001 : 0.15, // Simulate significance
+                        'significant': Math.random() < 0.7,
+                        'winner': Math.random() < 0.7 ? 'Version B: Don\'t Miss Out!' : 'None'
                     };
-                } catch (error) {
-                    console.error('Error fetching campaign reports:', error);
-                    return this.generateMockReports();
-                }
-            }
 
-            getMockLists() {
-                return [
-                    { id: 'mock_list_1', name: 'Main Newsletter', member_count: 2450 },
-                    { id: 'mock_list_2', name: 'Prospects', member_count: 1820 },
-                    { id: 'mock_list_3', name: 'Customers', member_count: 3670 },
-                    { id: 'mock_list_4', name: 'Inactive Users', member_count: 950 }
-                ];
-            }
+                    const mockSegmentData = [
+                        { segment: 'New User', total_sent: Math.floor(Math.random() * 1000 + 2000), open_rate: (Math.random() * 5 + 20), click_rate: (Math.random() * 3 + 10), conversion_rate: (Math.random() * 1 + 3), revenue_per_email: (Math.random() * 0.2 + 0.3) },
+                        { segment: 'Loyal Customer', total_sent: Math.floor(Math.random() * 1000 + 4000), open_rate: (Math.random() * 5 + 30), click_rate: (Math.random() * 3 + 15), conversion_rate: (Math.random() * 1 + 6), revenue_per_email: (Math.random() * 0.2 + 1.0) },
+                        { segment: 'Churn Risk', total_sent: Math.floor(Math.random() * 500 + 1500), open_rate: (Math.random() * 5 + 15), click_rate: (Math.random() * 3 + 7), conversion_rate: (Math.random() * 1 + 2), revenue_per_email: (Math.random() * 0.1 + 0.2) }
+                    ];
 
-            createMockCampaign(campaignData) {
-                return {
-                    id: 'mock_campaign_' + Date.now(),
-                    web_id: Math.floor(Math.random() * 1000000),
-                    type: 'regular',
-                    create_time: new Date().toISOString(),
-                    archive_url: '#',
-                    status: 'save',
-                    emails_sent: 0,
-                    send_time: null,
-                    content_type: 'template',
-                    settings: {
-                        subject_line: campaignData.subject,
-                        title: campaignData.name,
-                        from_name: campaignData.fromName || 'Your Company',
-                        reply_to: campaignData.replyTo || 'noreply@yourcompany.com'
+                    // Populate overall KPIs
+                    document.getElementById('totalEmails').textContent = parseInt(mockOverallKPIs['Total Emails Sent']).toLocaleString();
+                    document.getElementById('openRate').textContent = `${mockOverallKPIs['Open Rate (%)']}%`;
+                    document.getElementById('conversionRate').textContent = `${mockOverallKPIs['Conversion Rate (%)']}%`;
+
+                    // Populate A/B Test Results
+                    const rateA = ((mockABTestResults.success_A / mockABTestResults.total_A) * 100).toFixed(2);
+                    const rateB = ((mockABTestResults.success_B / mockABTestResults.total_B) * 100).toFixed(2);
+
+                    document.getElementById('abTestSentA').textContent = mockABTestResults.total_A.toLocaleString();
+                    document.getElementById('abTestConversionsA').textContent = mockABTestResults.success_A.toLocaleString();
+                    document.getElementById('abTestRateA').textContent = `${rateA}%`;
+
+                    document.getElementById('abTestSentB').textContent = mockABTestResults.total_B.toLocaleString();
+                    document.getElementById('abTestConversionsB').textContent = mockABTestResults.success_B.toLocaleString();
+                    document.getElementById('abTestRateB').textContent = `${rateB}%`;
+
+                    const abTestConclusionElement = document.getElementById('abTestConclusion');
+                    if (mockABTestResults.significant) {
+                        abTestConclusionElement.innerHTML = `
+                            <p class="font-semibold">Conclusion:</p>
+                            <p>The difference in conversion rate between '${mockABTestResults.version_A}' and '${mockABTestResults.version_B}' is statistically significant (p < 0.05). '${mockABTestResults.winner}' performed better.</p>
+                        `;
+                        abTestConclusionElement.classList.remove('bg-blue-50', 'border-blue-200', 'text-blue-800', 'bg-yellow-50', 'border-yellow-200', 'text-yellow-800');
+                        abTestConclusionElement.classList.add('bg-green-50', 'border-green-200', 'text-green-800');
+                    } else {
+                        abTestConclusionElement.innerHTML = `
+                            <p class="font-semibold">Conclusion:</p>
+                            <p>The difference in conversion rate between '${mockABTestResults.version_A}' and '${mockABTestResults.version_B}' is NOT statistically significant (p >= 0.05). More data or a larger effect size might be needed.</p>
+                        `;
+                        abTestConclusionElement.classList.remove('bg-green-50', 'border-green-200', 'text-green-800', 'bg-blue-50', 'border-blue-200', 'text-blue-800');
+                        abTestConclusionElement.classList.add('bg-yellow-50', 'border-yellow-200', 'text-yellow-800');
                     }
-                };
+
+                    // Populate Segment Data
+                    const segmentTableBody = document.getElementById('segmentTableBody');
+                    segmentTableBody.innerHTML = ''; // Clear existing rows
+                    mockSegmentData.forEach(segment => {
+                        const row = `
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${segment.segment}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${segment.total_sent.toLocaleString()}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${segment.open_rate.toFixed(2)}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${segment.click_rate.toFixed(2)}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${segment.conversion_rate.toFixed(2)}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${segment.revenue_per_email.toFixed(2)}</td>
+                            </tr>
+                        `;
+                        segmentTableBody.insertAdjacentHTML('beforeend', row);
+                    });
+
+                    // Update Charts with mock data
+                    createOpenRateChart(
+                        ['Version A: Exciting Offer!', 'Version B: Don\'t Miss Out!'],
+                        [(Math.random() * 5 + 25), (Math.random() * 5 + 30)] // Simulate different rates
+                    );
+                    createConversionRateChart(
+                        mockSegmentData.map(s => s.segment),
+                        mockSegmentData.map(s => s.conversion_rate)
+                    );
+
+
+                    loadingIndicator.classList.add('hidden');
+                    dashboardContent.classList.remove('hidden');
+
+                }, 1500); // Simulate 1.5 second loading time
             }
 
-            generateMockReports() {
-                return {
-                    opens: Math.floor(Math.random() * 500) + 100,
-                    clicks: Math.floor(Math.random() * 100) + 20,
-                    unsubscribes: Math.floor(Math.random() * 10) + 1,
-                    bounces: Math.floor(Math.random() * 20) + 5,
-                    openRate: Math.floor(Math.random() * 30) + 15,
-                    clickRate: Math.floor(Math.random() * 8) + 2
-                };
-            }
-        }
+            // Initial data load
+            fetchDataAndRenderDashboard(startDateInput.value, endDateInput.value);
 
-        // SheetsTracker class (inline for artifact)
-        class SheetsTracker {
-            constructor(spreadsheetId, apiKey) {
-                this.spreadsheetId = spreadsheetId;
-                this.apiKey = apiKey;
-                this.baseUrl = 'https://sheets.googleapis.com/v4/spreadsheets';
-                this.batchData = [];
-                this.initialized = false;
-            }
-
-            async initialize() {
-                try {
-                    // Simulate initialization
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                    this.initialized = true;
-                    console.log('Google Sheets Tracker initialized successfully');
-                    return true;
-                } catch (error) {
-                    console.error('Error initializing Sheets Tracker:', error);
-                    this.initialized = false;
-                    return false;
-                }
-            }
-
-            async logCampaignCreation(campaignId, campaignData) {
-                const data = [
-                    new Date().toISOString(),
-                    campaignId,
-                    campaignData.name,
-                    campaignData.type,
-                    campaignData.segment,
-                    campaignData.status || 'active',
-                    campaignData.emailCount || 5
-                ];
-
-                console.log('Logging campaign creation:', data);
-                this.logUserAction('campaign_created', campaignId, JSON.stringify(campaignData));
-            }
-
-            async logCampaignMetrics(campaignId, metrics) {
-                const data = [
-                    new Date().toISOString(),
-                    campaignId,
-                    metrics.openRate || 0,
-                    metrics.clickRate || 0,
-                    metrics.conversionRate || 0,
-                    metrics.unsubscribeRate || 0,
-                    metrics.leads || 0
-                ];
-
-                console.log('Logging campaign metrics:', data);
-            }
-
-            async logCampaignSent(campaignId) {
-                this.logUserAction('campaign_sent', campaignId, 'Campaign sent successfully');
-            }
-
-            async logUserAction(actionType, campaignId = '', details = '') {
-                const data = [
-                    new Date().toISOString(),
-                    actionType,
-                    campaignId,
-                    navigator.userAgent,
-                    details
-                ];
-
-                console.log('Logging user action:', data);
-            }
-
-            async logABTest(testId, testData) {
-                const data = [
-                    new Date().toISOString(),
-                    testId,
-                    testData.subjectA,
-                    testData.subjectB,
-                    testData.openRateA,
-                    testData.openRateB,
-                    testData.clickRateA,
-                    testData.clickRateB,
-                    testData.winner,
-                    testData.sampleSize
-                ];
-
-                console.log('Logging A/B test:', data);
-                this.logUserAction('ab_test_completed', testId, JSON.stringify(testData));
-            }
-
-            async exportToCsv(sheetName) {
-                // Mock CSV export
-                const csvData = "Timestamp,Campaign_ID,Campaign_Name,Type,Segment,Status,Email_Count\n2024-01-01,123,Test Campaign,welcome,new-leads,active,5";
-                const blob = new Blob([csvData], { type: 'text/csv' });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `${sheetName}_${new Date().toISOString().split('T')[0]}.csv`;
-                a.click();
-                window.URL.revokeObjectURL(url);
-            }
-        }
-
-        // Global variables
-        let campaigns = [];
-        let campaignIdCounter = 1;
-        let audienceLists = [];
-
-        // Email templates for different campaign types
-        const emailTemplates = {
-            welcome: [
-                { day: 0, subject: "Welcome to [Company]! Let's get started", type: "Welcome" },
-                { day: 2, subject: "Your first steps to success", type: "Onboarding" },
-                { day: 5, subject: "Resources to help you succeed", type: "Educational" },
-                { day: 8, subject: "Meet our customer success team", type: "Introduction" },
-                { day: 12, subject: "Your progress so far", type: "Progress Check" }
-            ],
-            nurture: [
-                { day: 0, subject: "Solving [Pain Point] in your industry", type: "Problem Identification" },
-                { day: 3, subject: "Case study: How [Company] increased ROI by 40%", type: "Social Proof" },
-                { day: 7, subject: "5 strategies to optimize your workflow", type: "Educational" },
-                { day: 10, subject: "Free consultation: Discuss your challenges", type: "Consultation Offer" },
-                { day: 14, subject: "Ready to transform your business?", type: "Sales Pitch" }
-            ],
-            product: [
-                { day: 0, subject: "Introducing our game-changing solution", type: "Product Introduction" },
-                { day: 2, subject: "See [Product] in action (Demo video)", type: "Demo" },
-                { day: 5, subject: "What customers are saying about [Product]", type: "Testimonials" },
-                { day: 8, subject: "Limited time: 30% off your first year", type: "Special Offer" },
-                { day: 12, subject: "Last chance: Offer expires soon", type: "Urgency" }
-            ],
-            retention: [
-                { day: 0, subject: "We miss you! Here's what's new at [Company]", type: "Re-engagement" },
-                { day: 4, subject: "Exclusive offer for our valued customers", type: "Special Offer" },
-                { day: 8, subject: "Help us improve: Share your feedback", type: "Feedback Request" },
-                { day: 12, subject: "Still thinking about us? We've got something for you", type: "Reminder" },
-                { day: 16, subject: "Don't miss out! Reconnect with [Company]", type: "Last Chance" }
-            ],
-            reengagement: [
-                { day: 0, subject: "It's been a while! Let's reconnect", type: "Re-engagement" },
-                { day: 3, subject: "Catch up on what you've missed", type: "Updates" },
-                { day: 7, subject: "A special offer to welcome you back", type: "Incentive" },
-                { day: 10, subject: "We're still here for you", type: "Support" },
-                { day: 14, subject: "Don't let this opportunity slip away", type: "Urgency" }
-            ]
-        };
-
-        // UI Elements
-        const campaignForm = document.getElementById('campaignForm');
-        const campaignsListDiv = document.getElementById('campaignsList');
-        const audienceSegmentSelect = document.getElementById('audienceSegment');
-        const abTestModal = document.getElementById('abTestModal');
-        const abTestForm = document.getElementById('abTestForm');
-        const testResultsDiv = document.getElementById('testResults');
-        const mailchimpStatusIndicator = document.getElementById('mailchimpStatus');
-        const mailchimpStatusText = document.getElementById('mailchimpStatusText');
-        const sheetsStatusIndicator = document.getElementById('sheetsStatus');
-        const sheetsStatusText = document.getElementById('sheetsStatusText');
-        const totalCampaignsMetric = document.getElementById('totalCampaigns');
-        const avgOpenRateMetric = document.getElementById('avgOpenRate');
-        const avgClickRateMetric = document.getElementById('avgClickRate');
-        const totalLeadsMetric = document.getElementById('totalLeads');
-        const audienceSegmentsDiv = document.getElementById('audienceSegments');
-        const notificationToast = document.getElementById('notification');
-
-        // Initialize Mailchimp and Sheets Tracker
-        window.mailchimpIntegration = new MailchimpIntegration('YOUR_MAILCHIMP_API_KEY', 'us1'); // Replace with actual API key and server prefix
-        window.sheetsTracker = new SheetsTracker('YOUR_GOOGLE_SHEETS_SPREADSHEET_ID', 'YOUR_GOOGLE_SHEETS_API_KEY'); // Replace with actual IDs
-
-        // Functions
-        async function initializeIntegrations() {
-            // Mailchimp
-            try {
-                const lists = await window.mailchimpIntegration.getLists();
-                audienceLists = lists;
-                populateAudienceSegments(lists);
-                updateIntegrationStatus('mailchimp', true);
-            } catch (error) {
-                console.error('Failed to initialize Mailchimp:', error);
-                updateIntegrationStatus('mailchimp', false);
-            }
-
-            // Sheets Tracker
-            try {
-                const initialized = await window.sheetsTracker.initialize();
-                updateIntegrationStatus('sheets', initialized);
-            } catch (error) {
-                console.error('Failed to initialize Sheets Tracker:', error);
-                updateIntegrationStatus('sheets', false);
-            }
-
-            // Load existing campaigns and analytics
-            loadCampaignsFromLocalStorage();
-            updateAnalytics();
-        }
-
-        function updateIntegrationStatus(integration, isConnected) {
-            const statusIndicator = document.getElementById(`${integration}Status`);
-            const statusText = document.getElementById(`${integration}StatusText`);
-
-            if (isConnected) {
-                statusIndicator.classList.remove('status-disconnected');
-                statusIndicator.classList.add('status-connected');
-                statusText.textContent = 'Connected';
-            } else {
-                statusIndicator.classList.remove('status-connected');
-                statusIndicator.classList.add('status-disconnected');
-                statusText.textContent = 'Disconnected (using mock data)';
-            }
-        }
-
-        function populateAudienceSegments(lists) {
-            audienceSegmentSelect.innerHTML = '<option value="">Select Audience</option>';
-            audienceSegmentsDiv.innerHTML = ''; // Clear existing segments
-
-            if (lists && lists.length > 0) {
-                lists.forEach(list => {
-                    const option = document.createElement('option');
-                    option.value = list.id;
-                    option.textContent = `${list.name} (${list.member_count || 'N/A'} members)`;
-                    audienceSegmentSelect.appendChild(option);
-
-                    // Display in Audience Segments panel
-                    const segmentCard = document.createElement('div');
-                    segmentCard.classList.add('segment-card', 'fade-in');
-                    segmentCard.innerHTML = `
-                        <div class="segment-size">${list.member_count || 'N/A'}</div>
-                        <div class="segment-name">${list.name}</div>
-                    `;
-                    audienceSegmentsDiv.appendChild(segmentCard);
-                });
-            } else {
-                audienceSegmentSelect.innerHTML = '<option value="">No audiences found (using mock data)</option>';
-                audienceSegmentsDiv.innerHTML = '<p>No audience segments to display.</p>';
-            }
-        }
-
-        function showNotification(message, type = 'success') {
-            notificationToast.textContent = message;
-            notificationToast.className = `notification ${type}`;
-            notificationToast.classList.add('show');
-            setTimeout(() => {
-                notificationToast.classList.remove('show');
-            }, 3000);
-        }
-
-        async function handleCreateCampaign(event) {
-            event.preventDefault();
-
-            const campaignName = document.getElementById('campaignName').value;
-            const campaignType = document.getElementById('campaignType').value;
-            const audienceSegmentId = document.getElementById('audienceSegment').value;
-            const emailCount = parseInt(document.getElementById('emailCount').value);
-            const fromName = document.getElementById('fromName').value;
-            const replyTo = document.getElementById('replyTo').value;
-
-            if (!campaignName || !campaignType || !audienceSegmentId) {
-                showNotification('Please fill in all required fields.', 'error');
-                return;
-            }
-
-            const selectedAudience = audienceLists.find(list => list.id === audienceSegmentId);
-            const audienceName = selectedAudience ? selectedAudience.name : 'Unknown Audience';
-            const audienceMemberCount = selectedAudience ? selectedAudience.member_count : 0;
-
-            const baseTemplates = emailTemplates[campaignType];
-            if (!baseTemplates) {
-                showNotification('Invalid campaign type selected.', 'error');
-                return;
-            }
-
-            const emails = [];
-            for (let i = 0; i < emailCount; i++) {
-                if (baseTemplates[i]) {
-                    emails.push({ ...baseTemplates[i], id: `email_${i + 1}` });
-                } else {
-                    // Fallback if emailCount is more than available templates
-                    emails.push({ day: (i * 3) + 1, subject: `Follow-up Email ${i + 1}`, type: "General" });
-                }
-            }
-
-            const campaignData = {
-                id: `campaign_${campaignIdCounter++}`,
-                name: campaignName,
-                type: campaignType,
-                segmentId: audienceSegmentId,
-                segmentName: audienceName,
-                audienceSize: audienceMemberCount,
-                emailCount: emailCount,
-                fromName: fromName,
-                replyTo: replyTo,
-                status: 'draft',
-                emails: emails,
-                metrics: { openRate: 0, clickRate: 0, conversionRate: 0, leads: 0 }
-            };
-
-            const createCampaignBtn = document.getElementById('createCampaignBtn');
-            createCampaignBtn.innerHTML = '<span class="loading-spinner"></span> Creating...';
-            createCampaignBtn.disabled = true;
-
-            try {
-                // Simulate creating campaign in Mailchimp (it logs to Sheets via mock internally)
-                const mailchimpCampaignResponse = await window.mailchimpIntegration.createCampaign({
-                    name: campaignData.name,
-                    type: campaignData.type,
-                    listId: campaignData.segmentId,
-                    subject: campaignData.emails[0]?.subject || `Campaign: ${campaignName}`,
-                    fromName: campaignData.fromName,
-                    replyTo: campaignData.replyTo
-                });
-
-                campaignData.mailchimpId = mailchimpCampaignResponse.id;
-                campaignData.status = 'active'; // Mark as active after creation
-
-                campaigns.push(campaignData);
-                saveCampaignsToLocalStorage();
-                renderCampaigns();
-                updateAnalytics();
-                showNotification('Campaign created successfully!', 'success');
-                campaignForm.reset();
-            } catch (error) {
-                console.error('Error creating campaign:', error);
-                showNotification('Failed to create campaign.', 'error');
-            } finally {
-                createCampaignBtn.innerHTML = 'Create Campaign';
-                createCampaignBtn.disabled = false;
-            }
-        }
-
-        function renderCampaigns() {
-            campaignsListDiv.innerHTML = '';
-            if (campaigns.length === 0) {
-                campaignsListDiv.innerHTML = '<p>No campaigns created yet. Start building one!</p>';
-                return;
-            }
-
-            campaigns.forEach(campaign => {
-                const campaignItem = document.createElement('div');
-                campaignItem.classList.add('campaign-item', 'fade-in');
-
-                let statusClass = '';
-                switch (campaign.status) {
-                    case 'active':
-                        statusClass = 'status-active';
-                        break;
-                    case 'paused':
-                        statusClass = 'status-paused';
-                        break;
-                    case 'completed':
-                        statusClass = 'status-completed';
-                        break;
-                    case 'sent':
-                        statusClass = 'status-sent';
-                        break;
-                    default:
-                        statusClass = '';
-                }
-
-                campaignItem.innerHTML = `
-                    <div class="campaign-header">
-                        <div class="campaign-title">${campaign.name}</div>
-                        <span class="campaign-status ${statusClass}">${campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}</span>
-                    </div>
-                    <p>Type: ${campaign.type.charAt(0).toUpperCase() + campaign.type.slice(1)} | Audience: ${campaign.segmentName} (${campaign.audienceSize} members)</p>
-                    <p>Emails: ${campaign.emailCount}</p>
-                    <div style="margin-top: 10px;">
-                        <button class="btn btn-secondary btn-sm" onclick="sendCampaign('${campaign.id}')" ${campaign.status === 'sent' ? 'disabled' : ''}>${campaign.status === 'sent' ? 'Sent' : 'Send Now'}</button>
-                        <button class="btn btn-secondary btn-sm" onclick="viewCampaignDetails('${campaign.id}')">View Details</button>
-                        <button class="btn btn-danger btn-sm" onclick="deleteCampaign('${campaign.id}')">Delete</button>
-                    </div>
-                `;
-                campaignsListDiv.appendChild(campaignItem);
+            // Event listener for apply filter button
+            applyFilterBtn.addEventListener('click', () => {
+                fetchDataAndRenderDashboard(startDateInput.value, endDateInput.value);
             });
-        }
-
-        async function sendCampaign(campaignId) {
-            const campaignIndex = campaigns.findIndex(c => c.id === campaignId);
-            if (campaignIndex > -1) {
-                if (campaigns[campaignIndex].status === 'sent') {
-                    showNotification('Campaign already sent.', 'info');
-                    return;
-                }
-
-                showNotification('Sending campaign...', 'info');
-                try {
-                    // Simulate sending via Mailchimp (which logs to Sheets)
-                    await window.mailchimpIntegration.sendCampaign(campaigns[campaignIndex].mailchimpId);
-                    campaigns[campaignIndex].status = 'sent';
-                    campaigns[campaignIndex].metrics = await window.mailchimpIntegration.getCampaignReports(campaigns[campaignIndex].mailchimpId);
-                    
-                    saveCampaignsToLocalStorage();
-                    renderCampaigns();
-                    updateAnalytics();
-                    showNotification(`Campaign "${campaigns[campaignIndex].name}" sent successfully!`, 'success');
-                } catch (error) {
-                    console.error('Error sending campaign:', error);
-                    showNotification('Failed to send campaign.', 'error');
-                }
-            }
-        }
-
-        function deleteCampaign(campaignId) {
-            campaigns = campaigns.filter(c => c.id !== campaignId);
-            saveCampaignsToLocalStorage();
-            renderCampaigns();
-            updateAnalytics();
-            showNotification('Campaign deleted successfully!', 'success');
-            if (window.sheetsTracker) {
-                window.sheetsTracker.logUserAction('campaign_deleted', campaignId);
-            }
-        }
-
-        function viewCampaignDetails(campaignId) {
-            const campaign = campaigns.find(c => c.id === campaignId);
-            if (!campaign) return;
-
-            const modal = document.getElementById('abTestModal'); // Reusing modal for simplicity
-            const modalContent = modal.querySelector('.modal-content');
-            modalContent.innerHTML = `
-                <span class="close" onclick="closeABTestModal()">&times;</span>
-                <h2>${campaign.name} Details</h2>
-                <p><strong>Type:</strong> ${campaign.type.charAt(0).toUpperCase() + campaign.type.slice(1)}</p>
-                <p><strong>Audience:</strong> ${campaign.segmentName} (${campaign.audienceSize} members)</p>
-                <p><strong>Status:</strong> <span class="campaign-status status-${campaign.status}">${campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}</span></p>
-                <p><strong>From:</strong> ${campaign.fromName} &lt;${campaign.replyTo}&gt;</p>
-                <h3 style="margin-top: 20px;">Email Sequence:</h3>
-                <div class="drip-sequence">
-                    ${campaign.emails.map(email => `
-                        <div class="drip-email">
-                            <span class="drip-day">Day ${email.day}</span>
-                            <p><strong>Subject:</strong> ${email.subject}</p>
-                            <p><small>Type: ${email.type}</small></p>
-                        </div>
-                    `).join('')}
-                </div>
-                <h3 style="margin-top: 20px;">Current Metrics:</h3>
-                <div class="analytics-grid" style="grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));">
-                    <div class="metric-card" style="background: linear-gradient(135deg, #1abc9c, #16a085);">
-                        <div class="metric-value">${campaign.metrics.openRate.toFixed(1)}%</div>
-                        <div class="metric-label">Open Rate</div>
-                    </div>
-                    <div class="metric-card" style="background: linear-gradient(135deg, #f1c40f, #f39c12);">
-                        <div class="metric-value">${campaign.metrics.clickRate.toFixed(1)}%</div>
-                        <div class="metric-label">Click Rate</div>
-                    </div>
-                    <div class="metric-card" style="background: linear-gradient(135deg, #3498db, #2980b9);">
-                        <div class="metric-value">${campaign.metrics.leads}</div>
-                        <div class="metric-label">Leads</div>
-                    </div>
-                </div>
-                <button class="btn btn-secondary" style="margin-top: 20px;" onclick="closeABTestModal()">Close</button>
-            `;
-            modal.style.display = 'block';
-        }
-
-        function updateAnalytics() {
-            if (campaigns.length === 0) {
-                totalCampaignsMetric.textContent = '0';
-                avgOpenRateMetric.textContent = '0%';
-                avgClickRateMetric.textContent = '0%';
-                totalLeadsMetric.textContent = '0';
-                return;
-            }
-
-            const activeCampaigns = campaigns.filter(c => c.status === 'active' || c.status === 'sent');
-            totalCampaignsMetric.textContent = activeCampaigns.length;
-
-            let totalOpenRate = 0;
-            let totalClickRate = 0;
-            let totalLeads = 0;
-            let countedCampaigns = 0;
-
-            activeCampaigns.forEach(campaign => {
-                if (campaign.metrics && campaign.metrics.openRate !== undefined && campaign.metrics.clickRate !== undefined) {
-                    totalOpenRate += campaign.metrics.openRate;
-                    totalClickRate += campaign.metrics.clickRate;
-                    totalLeads += campaign.metrics.leads || 0;
-                    countedCampaigns++;
-                }
-            });
-
-            avgOpenRateMetric.textContent = countedCampaigns > 0 ? `${(totalOpenRate / countedCampaigns).toFixed(1)}%` : '0%';
-            avgClickRateMetric.textContent = countedCampaigns > 0 ? `${(totalClickRate / countedCampaigns).toFixed(1)}%` : '0%';
-            totalLeadsMetric.textContent = totalLeads;
-        }
-
-        function saveCampaignsToLocalStorage() {
-            localStorage.setItem('emailCampaigns', JSON.stringify(campaigns));
-        }
-
-        async function loadCampaignsFromLocalStorage() {
-            const storedCampaigns = localStorage.getItem('emailCampaigns');
-            if (storedCampaigns) {
-                campaigns = JSON.parse(storedCampaigns);
-                // For demonstration, fetch mock reports for existing campaigns to update metrics
-                for (const campaign of campaigns) {
-                    if (campaign.mailchimpId) {
-                        campaign.metrics = await window.mailchimpIntegration.getCampaignReports(campaign.mailchimpId);
-                    }
-                }
-                renderCampaigns();
-                updateAnalytics();
-            }
-        }
-
-        function openABTestModal() {
-            abTestModal.style.display = 'block';
-            testResultsDiv.style.display = 'none'; // Hide previous results
-            testResultsDiv.innerHTML = '';
-            document.getElementById('subjectA').value = '';
-            document.getElementById('subjectB').value = '';
-            document.getElementById('testSize').value = '20';
-        }
-
-        function closeABTestModal() {
-            abTestModal.style.display = 'none';
-        }
-
-        async function handleABTest(event) {
-            event.preventDefault();
-            const subjectA = document.getElementById('subjectA').value;
-            const subjectB = document.getElementById('subjectB').value;
-            const testSize = parseInt(document.getElementById('testSize').value);
-
-            if (!subjectA || !subjectB) {
-                showNotification('Please enter both subject lines for the A/B test.', 'error');
-                return;
-            }
-
-            // Simulate A/B test results
-            const openRateA = Math.floor(Math.random() * 30) + 15;
-            const openRateB = Math.floor(Math.random() * 30) + 15;
-            const clickRateA = Math.floor(Math.random() * 8) + 2;
-            const clickRateB = Math.floor(Math.random() * 8) + 2;
-
-            const winner = openRateA > openRateB ? 'A' : 'B';
-            const improvement = Math.abs(openRateA - openRateB);
-
-            testResultsDiv.style.display = 'block';
-            testResultsDiv.innerHTML = `
-                <h3>A/B Test Results</h3>
-                <div style="margin: 15px 0;">
-                    <strong>Subject Line A:</strong> "${subjectA}"<br>
-                    Open Rate: ${openRateA}% | Click Rate: ${clickRateA}%
-                </div>
-                <div style="margin: 15px 0;">
-                    <strong>Subject Line B:</strong> "${subjectB}"<br>
-                    Open Rate: ${openRateB}% | Click Rate: ${clickRateB}%
-                </div>
-                <div style="padding: 15px; background: ${winner === 'A' ? '#d4edda' : '#cce7ff'}; border-radius: 8px; margin-top: 15px;">
-                    <strong>Winner: Subject Line ${winner}</strong><br>
-                    Improvement: +${improvement}% open rate<br>
-                    <small>Test conducted on ${testSize}% of audience.</small>
-                </div>
-            `;
-
-            if (window.sheetsTracker) {
-                window.sheetsTracker.logABTest(`ab_test_${Date.now()}`, {
-                    subjectA, subjectB, openRateA, openRateB, clickRateA, clickRateB, winner, sampleSize: testSize
-                });
-            }
-            showNotification('A/B Test completed!', 'success');
-        }
-
-        function exportAnalytics() {
-            if (window.sheetsTracker) {
-                window.sheetsTracker.exportToCsv('Campaign_Analytics');
-                showNotification('Analytics exported to CSV!', 'success');
-            } else {
-                showNotification('Google Sheets Tracker not initialized for export.', 'error');
-            }
-        }
-
-        async function refreshAnalytics() {
-            showNotification('Refreshing analytics data...', 'info');
-            for (const campaign of campaigns) {
-                if (campaign.mailchimpId) {
-                    campaign.metrics = await window.mailchimpIntegration.getCampaignReports(campaign.mailchimpId);
-                }
-            }
-            saveCampaignsToLocalStorage(); // Update local storage with fresh metrics
-            updateAnalytics();
-            showNotification('Analytics data refreshed!', 'success');
-        }
-
-        // Event Listeners
-        document.addEventListener('DOMContentLoaded', initializeIntegrations);
-        campaignForm.addEventListener('submit', handleCreateCampaign);
-        abTestForm.addEventListener('submit', handleABTest);
-
-        // Close modal when clicking outside of it
-        window.onclick = function(event) {
-            if (event.target == abTestModal) {
-                abTestModal.style.display = "none";
-            }
-        }
+        });
     </script>
 </body>
 </html>
