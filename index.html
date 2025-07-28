@@ -6,313 +6,744 @@
     <title>Email Campaign Optimization Dashboard</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts - Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Chart.js CDN for interactive charts -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    <!-- Chart.js CDN for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        /* Custom styles for Inter font and general aesthetics */
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f3f4f6; /* Light gray background */
+            color: #374151; /* Darker gray text */
         }
         .card {
             background-color: #ffffff;
-            border-radius: 0.75rem; /* rounded-xl */
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* shadow-md */
-            padding: 1.5rem; /* p-6 */
-            transition: transform 0.2s ease-in-out;
+            border-radius: 1rem; /* More rounded corners */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 1.5rem;
         }
-        .card:hover {
-            transform: translateY(-5px);
-        }
-        .tab-button {
-            transition: background-color 0.3s ease, color 0.3s ease;
-        }
-        .tab-button.active {
-            background-color: #1d4ed8; /* blue-700 */
+        .gradient-button {
+            background-image: linear-gradient(to right, #6366f1, #a855f7); /* Purple-blue gradient */
             color: white;
-            border-radius: 0.75rem 0.75rem 0 0; /* rounded-t-xl */
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            transition: transform 0.2s ease-in-out;
+            cursor: pointer;
         }
-        .tab-content {
-            display: none;
+        .gradient-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 10px -2px rgba(99, 102, 241, 0.4);
+        }
+        .metric-value {
+            font-size: 2.5rem; /* Larger font for key metrics */
+            font-weight: 700;
+            color: #1f2937; /* Darker color for emphasis */
+        }
+        .metric-label {
+            font-size: 1rem;
+            color: #6b7280;
+            margin-top: 0.5rem;
+        }
+        .insight-card {
+            background-color: #fff;
+            border-left: 4px solid #4f46e5; /* Indigo border for insights */
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05);
+            display: flex; /* For dismiss button */
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .insight-card p {
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        .table-header {
+            background-color: #e5e7eb; /* Light gray for table headers */
+            color: #4b5563;
+            font-weight: 600;
+            padding: 0.75rem 1rem;
+            text-align: left;
+        }
+        .table-row:nth-child(even) {
+            background-color: #f9fafb; /* Slightly different background for even rows */
+        }
+        .table-row td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #e5e7eb;
+            cursor: pointer; /* Indicate clickable rows */
+        }
+        /* Modal styles */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
             opacity: 0;
-            transition: opacity 0.5s ease-in-out;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
         }
-        .tab-content.active {
-            display: block;
+        .modal.open {
             opacity: 1;
+            visibility: visible;
         }
-        /* Custom scrollbar for better UX */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            max-width: 90%;
+            max-height: 90%;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23);
+            transform: translateY(20px);
+            transition: transform 0.3s ease-in-out;
         }
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
+        .modal.open .modal-content {
+            transform: translateY(0);
         }
-        ::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 10px;
+        .close-button {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #6b7280;
         }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #555;
+        .close-button:hover {
+            color: #1f2937;
+        }
+
+        /* Toast Notification */
+        #toast-container {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column-reverse; /* New toasts appear on top */
+            gap: 0.75rem;
+        }
+        .toast {
+            background-color: #333;
+            color: white;
+            padding: 0.75rem 1.25rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+            min-width: 200px;
+            text-align: center;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
         }
 
         /* Loading Spinner */
-        .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #6366f1;
             border-radius: 50%;
-            width: 30px;
-            height: 30px;
+            width: 40px;
+            height: 40px;
             animation: spin 1s linear infinite;
-            display: none; /* Hidden by default */
+            margin: 2rem auto;
         }
-
-        .loader.active {
-            display: block;
-        }
-
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
-<body class="min-h-screen flex flex-col">
-
-    <!-- Header -->
-    <header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-6 shadow-lg">
-        <div class="container mx-auto flex items-center justify-between">
-            <h1 class="text-3xl font-bold">Email Campaign Dashboard</h1>
-            <nav>
-                <ul class="flex space-x-6">
-                    <li><a href="#" class="hover:text-blue-200 transition duration-300">Overview</a></li>
-                    <li><a href="#" class="hover:text-blue-200 transition duration-300">A/B Tests</a></li>
-                    <li><a href="#" class="hover:text-blue-200 transition duration-300">Segments</a></li>
-                    <li><a href="#" class="hover:text-blue-200 transition duration-300">Settings</a></li>
-                </ul>
-            </nav>
+<body class="p-4 md:p-8">
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="text-center">
+            <div class="spinner"></div>
+            <p class="text-gray-700 mt-4 text-lg">Loading Dashboard Data...</p>
         </div>
-    </header>
+    </div>
 
-    <!-- Main Content Area -->
-    <main class="container mx-auto p-6 flex-grow">
-        <!-- Date Range Filter -->
-        <div class="card mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
-            <h2 class="text-xl font-semibold text-gray-800">Filter Data by Date Range:</h2>
-            <div class="flex flex-col md:flex-row gap-4 w-full md:w-auto">
-                <div class="flex items-center gap-2">
-                    <label for="startDate" class="text-gray-700">From:</label>
-                    <input type="date" id="startDate" class="p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-                </div>
-                <div class="flex items-center gap-2">
-                    <label for="endDate" class="text-gray-700">To:</label>
-                    <input type="date" id="endDate" class="p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-                </div>
-                <button id="applyFilterBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 ease-in-out transform hover:scale-105">
-                    Apply Filter
-                </button>
+    <div class="max-w-7xl mx-auto">
+        <!-- Header Section -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-extrabold text-gray-900 mb-2">Email Campaign Optimization Dashboard</h1>
+            <p class="text-lg text-gray-600">Simulating data-driven insights for Product Managers, Growth Marketers, and Product Analysts</p>
+        </header>
+
+        <!-- Action Buttons -->
+        <section class="flex justify-end mb-6">
+            <button id="create-campaign-btn" class="gradient-button">
+                + Create New Campaign
+            </button>
+        </section>
+
+        <!-- Key Metrics Overview -->
+        <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="card text-center">
+                <div class="metric-value" id="total-campaigns">0</div>
+                <div class="metric-label">Total Campaigns Run</div>
             </div>
-        </div>
-
-        <!-- Loading Indicator -->
-        <div id="loadingIndicator" class="flex justify-center items-center py-8 hidden">
-            <div class="loader active mr-3"></div>
-            <p class="text-lg text-gray-700">Loading data, please wait...</p>
-        </div>
-
-        <div id="dashboardContent" class="hidden">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <!-- KPI Cards -->
-                <div class="card flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-500 text-sm">Total Emails Sent</p>
-                        <p class="text-3xl font-bold text-gray-800" id="totalEmails">0</p>
-                    </div>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                </div>
-                <div class="card flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-500 text-sm">Open Rate</p>
-                        <p class="text-3xl font-bold text-gray-800" id="openRate">0.00%</p>
-                    </div>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                </div>
-                <div class="card flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-500 text-sm">Conversion Rate</p>
-                        <p class="text-3xl font-bold text-gray-800" id="conversionRate">0.00%</p>
-                    </div>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+            <div class="card text-center">
+                <div class="metric-value" id="avg-open-rate">0%</div>
+                <div class="metric-label">Avg. Open Rate</div>
+                <div class="text-sm text-green-600 flex items-center justify-center mt-1">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
+                    <span id="open-rate-trend">0%</span> MoM
                 </div>
             </div>
-
-            <!-- Tabs for different sections -->
-            <div class="bg-white rounded-xl shadow-md p-4 mb-6">
-                <div class="flex border-b border-gray-200">
-                    <button class="tab-button active px-6 py-3 text-lg font-medium text-gray-700 hover:bg-blue-100 transition duration-300" data-tab="overview">Overview</button>
-                    <button class="tab-button px-6 py-3 text-lg font-medium text-gray-700 hover:bg-blue-100 transition duration-300" data-tab="ab-tests">A/B Tests</button>
-                    <button class="tab-button px-6 py-3 text-lg font-medium text-gray-700 hover:bg-blue-100 transition duration-300" data-tab="segments">Segments</button>
-                </div>
-
-                <!-- Tab Content -->
-                <div id="overview" class="tab-content active pt-4">
-                    <h2 class="text-2xl font-semibold text-gray-800 mb-4">Overall Campaign Performance</h2>
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div class="card">
-                            <h3 class="text-xl font-medium mb-4">Open Rate by Subject Line Version</h3>
-                            <canvas id="openRateChart" class="w-full h-auto rounded-lg"></canvas>
-                            <p class="text-sm text-gray-500 mt-2">This chart visualizes the open rates for different subject line variations, helping identify which performs best.</p>
-                        </div>
-                        <div class="card">
-                            <h3 class="text-xl font-medium mb-4">Conversion Rate by User Segment</h3>
-                            <canvas id="conversionRateChart" class="w-full h-auto rounded-lg"></canvas>
-                            <p class="text-sm text-gray-500 mt-2">Understand how different user segments respond to your campaigns by analyzing their conversion rates.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="ab-tests" class="tab-content pt-4">
-                    <h2 class="text-2xl font-semibold text-gray-800 mb-4">A/B Test Results</h2>
-                    <div class="card">
-                        <h3 class="text-xl font-medium mb-4">Subject Line A/B Test: Conversion Rate</h3>
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Version</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Emails Sent</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Conversions</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Conversion Rate (%)</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="bg-white divide-y divide-gray-200">
-                                    <tr>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Version A: Exciting Offer!</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" id="abTestSentA">0</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" id="abTestConversionsA">0</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" id="abTestRateA">0.00%</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Version B: Don't Miss Out!</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" id="abTestSentB">0</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" id="abTestConversionsB">0</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" id="abTestRateB">0.00%</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="mt-4 p-4 rounded-lg bg-blue-50 border border-blue-200 text-blue-800" id="abTestConclusion">
-                            <p class="font-semibold">Conclusion:</p>
-                            <p>Loading A/B test results...</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="segments" class="tab-content pt-4">
-                    <h2 class="text-2xl font-semibold text-gray-800 mb-4">Performance by User Segment</h2>
-                    <div class="card">
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Segment</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Emails Sent</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Open Rate (%)</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Click Rate (%)</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Conversion Rate (%)</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue per Email ($)</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="bg-white divide-y divide-gray-200" id="segmentTableBody">
-                                    <!-- Data will be populated by JavaScript -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+            <div class="card text-center">
+                <div class="metric-value" id="avg-ctr">0%</div>
+                <div class="metric-label">Avg. Click-Through Rate</div>
+                <div class="text-sm text-green-600 flex items-center justify-center mt-1">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
+                    <span id="ctr-trend">0%</span> MoM
                 </div>
             </div>
-        </div>
-    </main>
+            <div class="card text-center">
+                <div class="metric-value" id="avg-conversion-rate">0%</div>
+                <div class="metric-label">Avg. Conversion Rate</div>
+                <div class="text-sm text-red-600 flex items-center justify-center mt-1">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
+                    <span id="conversion-rate-trend">0%</span> MoM
+                </div>
+            </div>
+        </section>
 
-    <!-- Footer -->
-    <footer class="bg-gray-800 text-white p-4 text-center text-sm mt-8">
-        <p>&copy; 2025 Email Campaign Optimizer. All rights reserved.</p>
-    </footer>
+        <!-- Actionable Insights Section -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Actionable Insights</h2>
+            <div id="insights-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Insights will be dynamically loaded here -->
+            </div>
+        </section>
+
+        <!-- Performance Trends Chart -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Performance Trends (Last 6 Months)</h2>
+            <div class="card">
+                <canvas id="performanceChart"></canvas>
+            </div>
+        </section>
+
+        <!-- Recent Campaigns Table -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Recent Campaigns</h2>
+            <div class="card overflow-x-auto">
+                <div class="mb-4">
+                    <input type="text" id="campaign-search" placeholder="Search campaigns by name..." class="p-2 border border-gray-300 rounded-lg w-full md:w-1/2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead>
+                        <tr>
+                            <th class="table-header rounded-tl-lg">Campaign Name</th>
+                            <th class="table-header">Send Date</th>
+                            <th class="table-header">Recipients</th>
+                            <th class="table-header">Open Rate</th>
+                            <th class="table-header">CTR</th>
+                            <th class="table-header rounded-tr-lg">Conversion Rate</th>
+                        </tr>
+                    </thead>
+                    <tbody id="campaigns-table-body" class="bg-white divide-y divide-gray-200">
+                        <!-- Campaign rows will be dynamically loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- A/B Test Results Section -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">A/B Test Results</h2>
+            <div id="ab-test-results" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- A/B test cards will be dynamically loaded here -->
+            </div>
+        </section>
+    </div>
+
+    <!-- Modals -->
+
+    <!-- Create New Campaign Modal -->
+    <div id="create-campaign-modal" class="modal">
+        <div class="modal-content w-full md:w-1/2 lg:w-1/3">
+            <button class="close-button" onclick="closeModal('create-campaign-modal')">&times;</button>
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Create New Campaign</h2>
+            <form id="create-campaign-form">
+                <div class="mb-4">
+                    <label for="campaign-name" class="block text-gray-700 text-sm font-bold mb-2">Campaign Name</label>
+                    <input type="text" id="campaign-name" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:ring-2 focus:ring-indigo-500" placeholder="e.g., Summer Sale Newsletter" required>
+                </div>
+                <div class="mb-4">
+                    <label for="subject-line" class="block text-gray-700 text-sm font-bold mb-2">Subject Line</label>
+                    <input type="text" id="subject-line" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:ring-2 focus:ring-indigo-500" placeholder="e.g., ☀️ Big Savings Inside!" required>
+                </div>
+                <div class="mb-4">
+                    <label for="audience-segment" class="block text-gray-700 text-sm font-bold mb-2">Audience Segment</label>
+                    <select id="audience-segment" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:ring-2 focus:ring-indigo-500" required>
+                        <option value="">Select Segment</option>
+                        <option value="All Subscribers">All Subscribers</option>
+                        <option value="Engaged Users">Engaged Users</option>
+                        <option value="New Signups">New Signups</option>
+                        <option value="Churn Risk">Churn Risk</option>
+                    </select>
+                </div>
+                <div class="mb-6">
+                    <label for="email-content" class="block text-gray-700 text-sm font-bold mb-2">Email Content (HTML/Text)</label>
+                    <textarea id="email-content" rows="6" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:ring-2 focus:ring-indigo-500" placeholder="<p>Hello,</p><p>Check out our latest offers!</p>" required></textarea>
+                </div>
+                <div class="flex items-center justify-between">
+                    <button type="submit" class="gradient-button">Create Campaign</button>
+                    <button type="button" class="bg-gray-300 text-gray-800 py-2 px-4 rounded-lg font-semibold hover:bg-gray-400 transition-colors" onclick="closeModal('create-campaign-modal')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Campaign Detail Modal -->
+    <div id="campaign-detail-modal" class="modal">
+        <div class="modal-content w-full md:w-2/3 lg:w-1/2">
+            <button class="close-button" onclick="closeModal('campaign-detail-modal')">&times;</button>
+            <h2 class="text-2xl font-bold text-gray-800 mb-4" id="detail-campaign-name"></h2>
+            <p class="text-gray-600 mb-4">Sent: <span id="detail-send-date" class="font-medium"></span> | Recipients: <span id="detail-recipients" class="font-medium"></span></p>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="card text-center p-3">
+                    <p class="text-sm text-gray-500">Open Rate</p>
+                    <p class="metric-value text-xl" id="detail-open-rate">0%</p>
+                </div>
+                <div class="card text-center p-3">
+                    <p class="text-sm text-gray-500">Click-Through Rate</p>
+                    <p class="metric-value text-xl" id="detail-ctr">0%</p>
+                </div>
+                <div class="card text-center p-3">
+                    <p class="text-sm text-gray-500">Conversion Rate</p>
+                    <p class="metric-value text-xl" id="detail-conversion-rate">0%</p>
+                </div>
+            </div>
+
+            <h3 class="text-xl font-semibold text-gray-800 mb-3">Subject Line: <span id="detail-subject-line" class="font-normal"></span></h3>
+            <h3 class="text-xl font-semibold text-gray-800 mb-3">Audience Segment: <span id="detail-audience-segment" class="font-normal"></span></h3>
+
+            <h3 class="text-xl font-semibold text-gray-800 mb-3">Email Content Preview:</h3>
+            <div id="detail-email-content-preview" class="border border-gray-300 rounded-lg p-4 bg-gray-50 overflow-y-auto max-h-60">
+                <!-- Email content will be rendered here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
 
     <script>
-        // Global Chart instances
-        let openRateChartInstance = null;
-        let conversionRateChartInstance = null;
+        // Global data store
+        let allCampaigns = [];
+        let allABTests = [];
+        let allMonthlyPerformance = [];
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const tabButtons = document.querySelectorAll('.tab-button');
-            const tabContents = document.querySelectorAll('.tab-content');
-            const loadingIndicator = document.getElementById('loadingIndicator');
-            const dashboardContent = document.getElementById('dashboardContent');
-            const startDateInput = document.getElementById('startDate');
-            const endDateInput = document.getElementById('endDate');
-            const applyFilterBtn = document.getElementById('applyFilterBtn');
+        // --- Utility Functions ---
+        function showToast(message, duration = 3000) {
+            const toastContainer = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            toastContainer.appendChild(toast);
 
-            // Set default date range (e.g., last 60 days)
-            const today = new Date();
-            const sixtyDaysAgo = new Date();
-            sixtyDaysAgo.setDate(today.getDate() - 60);
+            // Trigger reflow to enable transition
+            void toast.offsetWidth;
+            toast.classList.add('show');
 
-            startDateInput.value = sixtyDaysAgo.toISOString().split('T')[0];
-            endDateInput.value = today.toISOString().split('T')[0];
+            setTimeout(() => {
+                toast.classList.remove('show');
+                toast.addEventListener('transitionend', () => toast.remove());
+            }, duration);
+        }
 
-            // --- Tab Switching Logic ---
-            tabButtons.forEach(button => {
-                button.addEventListener('click', () => {
-                    tabButtons.forEach(btn => btn.classList.remove('active'));
-                    tabContents.forEach(content => content.classList.remove('active'));
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.add('open');
+        }
 
-                    button.classList.add('active');
-                    const targetTab = button.dataset.tab;
-                    document.getElementById(targetTab).classList.add('active');
-                });
-            });
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('open');
+        }
 
-            // --- Chart Initialization Functions ---
-            function createOpenRateChart(labels, data) {
-                const ctx = document.getElementById('openRateChart').getContext('2d');
-                if (openRateChartInstance) {
-                    openRateChartInstance.destroy(); // Destroy previous instance if it exists
+        // --- Data Simulation Module ---
+        const DataSimulator = (() => {
+            const generateRandomNumber = (min, max) => (Math.random() * (max - min) + min);
+            const generateRandomDate = (start, end) => new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+
+            const sampleEmailContents = [
+                `<p>Hi there,</p><p>We have an exciting new update for you! Check out our latest features designed to boost your productivity.</p><p>Best,</p><p>The Team</p>`,
+                `<p>Hello Valued Customer,</p><p>Don't miss out on our exclusive summer sale! Get up to 50% off on selected items for a limited time.</p><p>Shop now!</p>`,
+                `<p>Greetings,</p><p>Your weekly dose of marketing insights is here. Learn strategies to optimize your campaigns and drive growth.</p><p>Read more on our blog.</p>`,
+                `<p>Dear User,</p><p>We noticed you haven't completed your profile. Finish setting up to unlock all premium features!</p><p>Complete your profile.</p>`,
+                `<p>Hey,</p><p>A quick reminder about our upcoming webinar on 'Mastering Email Automation'. Register today to secure your spot!</p><p>See you there,</p><p>The Marketing Squad</p>`
+            ];
+
+            // Generates a single mock campaign
+            const generateCampaign = (id) => {
+                const recipients = Math.floor(generateRandomNumber(500, 10000));
+                const openRate = generateRandomNumber(0.20, 0.45); // 20-45%
+                const ctr = generateRandomNumber(0.02, 0.08);    // 2-8%
+                const conversionRate = generateRandomNumber(0.01, 0.05); // 1-5%
+                const sendDate = generateRandomDate(new Date(2024, 0, 1), new Date()); // From Jan 1, 2024 to now
+
+                const campaignNames = [
+                    "Weekly Marketing Insights",
+                    "Product Update: New Features!",
+                    "Exclusive Offer Just For You",
+                    "Unlock Your Growth Potential",
+                    "Q3 Newsletter: Deep Dive",
+                    "Flash Sale Alert!",
+                    "Your Personalized Recommendations",
+                    "Tips for Boosting Conversions",
+                    "Webinar Invitation: Master Email Marketing",
+                    "Customer Feedback Survey"
+                ];
+                const subjectLineEmojis = ["", "🚀", "💡", "✨", "📈", "🎁", "🔥"];
+                const campaignName = `${campaignNames[Math.floor(Math.random() * campaignNames.length)]} ${subjectLineEmojis[Math.floor(Math.random() * subjectLineEmojis.length)]}`;
+                const subjectLine = `${campaignName}`; // Subject line is the campaign name for simplicity here
+
+                const audienceSegments = ["All Subscribers", "Engaged Users", "New Signups", "Churn Risk"];
+
+                return {
+                    id: `campaign-${id}`,
+                    name: campaignName,
+                    subjectLine: subjectLine,
+                    audienceSegment: audienceSegments[Math.floor(Math.random() * audienceSegments.length)],
+                    emailContent: sampleEmailContents[Math.floor(Math.random() * sampleEmailContents.length)],
+                    sendDate: sendDate.toISOString().split('T')[0], // YYYY-MM-DD
+                    recipients: recipients,
+                    openRate: parseFloat(openRate.toFixed(3)),
+                    ctr: parseFloat(ctr.toFixed(3)),
+                    conversionRate: parseFloat(conversionRate.toFixed(3)),
+                    isABTest: false
+                };
+            };
+
+            // Generates mock A/B test data
+            const generateABTest = (id) => {
+                const testType = Math.random() > 0.5 ? "Subject Line" : "CTA";
+                let variantA, variantB;
+                let openRateA, openRateB, ctrA, ctrB, conversionRateA, conversionRateB;
+
+                if (testType === "Subject Line") {
+                    variantA = "Your Weekly Update";
+                    variantB = "🚀 This Week's Marketing Wins!";
+                    openRateA = generateRandomNumber(0.25, 0.35);
+                    openRateB = openRateA * generateRandomNumber(1.1, 1.25); // B is 10-25% better
+                    ctrA = generateRandomNumber(0.03, 0.05);
+                    ctrB = ctrA * generateRandomNumber(1.05, 1.15);
+                    conversionRateA = generateRandomNumber(0.015, 0.03);
+                    conversionRateB = conversionRateA * generateRandomNumber(1.02, 1.08);
+                } else { // CTA Test
+                    variantA = "Learn More (Text Link)";
+                    variantB = "Discover Now! (Button)";
+                    openRateA = generateRandomNumber(0.30, 0.40);
+                    openRateB = openRateA * generateRandomNumber(0.95, 1.05); // Open rates similar
+                    ctrA = generateRandomNumber(0.03, 0.045);
+                    ctrB = ctrA * generateRandomNumber(1.15, 1.35); // B is 15-35% better
+                    conversionRateA = generateRandomNumber(0.01, 0.025);
+                    conversionRateB = conversionRateA * generateRandomNumber(1.1, 1.2);
                 }
-                openRateChartInstance = new Chart(ctx, {
-                    type: 'bar',
+
+                const sampleSize = Math.floor(generateRandomNumber(800, 1500));
+                const sendDate = generateRandomDate(new Date(2024, 3, 1), new Date()); // From April 1, 2024 to now
+
+                return {
+                    id: `abtest-${id}`,
+                    name: `A/B Test: ${testType} #${id}`,
+                    type: testType,
+                    sendDate: sendDate.toISOString().split('T')[0],
+                    variantA: {
+                        label: variantA,
+                        recipients: sampleSize,
+                        openRate: parseFloat(openRateA.toFixed(3)),
+                        ctr: parseFloat(ctrA.toFixed(3)),
+                        conversionRate: parseFloat(conversionRateA.toFixed(3))
+                    },
+                    variantB: {
+                        label: variantB,
+                        recipients: sampleSize,
+                        openRate: parseFloat(openRateB.toFixed(3)),
+                        ctr: parseFloat(ctrB.toFixed(3)),
+                        conversionRate: parseFloat(conversionRateB.toFixed(3))
+                    },
+                    isABTest: true
+                };
+            };
+
+            // Generates mock monthly performance data for charts
+            const generateMonthlyPerformance = () => {
+                const data = [];
+                const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"]; // Up to current month
+                let baseOpenRate = 0.30;
+                let baseCTR = 0.04;
+                let baseConversionRate = 0.02;
+
+                months.forEach((month, index) => {
+                    // Simulate slight variations and an overall upward trend
+                    baseOpenRate += generateRandomNumber(-0.01, 0.02);
+                    baseCTR += generateRandomNumber(-0.005, 0.008);
+                    baseConversionRate += generateRandomNumber(-0.002, 0.005);
+
+                    data.push({
+                        month: month,
+                        openRate: parseFloat(Math.min(0.5, Math.max(0.2, baseOpenRate)).toFixed(3)),
+                        ctr: parseFloat(Math.min(0.09, Math.max(0.02, baseCTR)).toFixed(3)),
+                        conversionRate: parseFloat(Math.min(0.06, Math.max(0.01, baseConversionRate)).toFixed(3))
+                    });
+                });
+                return data;
+            };
+
+            // Main function to generate all mock data
+            const generateMockData = (numCampaigns = 15, numABTests = 3) => {
+                const campaigns = [];
+                for (let i = 0; i < numCampaigns; i++) {
+                    campaigns.push(generateCampaign(i + 1));
+                }
+
+                const abTests = [];
+                for (let i = 0; i < numABTests; i++) {
+                    abTests.push(generateABTest(i + 1));
+                }
+
+                const monthlyPerformance = generateMonthlyPerformance();
+
+                return { campaigns, abTests, monthlyPerformance };
+            };
+
+            return {
+                generateMockData
+            };
+        })();
+
+        // --- UI Renderer Module ---
+        // This module handles rendering data to the DOM.
+        const UIRenderer = (() => {
+            // Renders the key metric cards
+            const renderKeyMetrics = (campaigns, monthlyPerformance) => {
+                const totalCampaigns = campaigns.length;
+                const avgOpenRate = campaigns.reduce((sum, c) => sum + c.openRate, 0) / totalCampaigns;
+                const avgCtr = campaigns.reduce((sum, c) => sum + c.ctr, 0) / totalCampaigns;
+                const avgConversionRate = campaigns.reduce((sum, c) => sum + c.conversionRate, 0) / totalCampaigns;
+
+                document.getElementById('total-campaigns').textContent = totalCampaigns;
+                document.getElementById('avg-open-rate').textContent = `${(avgOpenRate * 100).toFixed(1)}%`;
+                document.getElementById('avg-ctr').textContent = `${(avgCtr * 100).toFixed(1)}%`;
+                document.getElementById('avg-conversion-rate').textContent = `${(avgConversionRate * 100).toFixed(1)}%`;
+
+                // Simulate MoM trends for demonstration
+                const lastMonth = monthlyPerformance[monthlyPerformance.length - 1];
+                const secondLastMonth = monthlyPerformance[monthlyPerformance.length - 2];
+
+                const openRateTrend = ((lastMonth.openRate - secondLastMonth.openRate) / secondLastMonth.openRate * 100).toFixed(1);
+                const ctrTrend = ((lastMonth.ctr - secondLastMonth.ctr) / secondLastMonth.ctr * 100).toFixed(1);
+                const conversionRateTrend = ((lastMonth.conversionRate - secondLastMonth.conversionRate) / secondLastMonth.conversionRate * 100).toFixed(1);
+
+                document.getElementById('open-rate-trend').textContent = `${Math.abs(openRateTrend)}%`;
+                document.getElementById('ctr-trend').textContent = `${Math.abs(ctrTrend)}%`;
+                document.getElementById('conversion-rate-trend').textContent = `${Math.abs(conversionRateTrend)}%`;
+
+                // Update trend arrow colors based on positive/negative
+                const updateTrendIndicator = (elementId, trendValue) => {
+                    const element = document.getElementById(elementId);
+                    if (element) {
+                        element.parentNode.classList.remove('text-green-600', 'text-red-600');
+                        if (trendValue >= 0) {
+                            element.parentNode.classList.add('text-green-600');
+                            element.previousElementSibling.innerHTML = '<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>';
+                        } else {
+                            element.parentNode.classList.add('text-red-600');
+                            element.previousElementSibling.innerHTML = '<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>';
+                        }
+                    }
+                };
+
+                updateTrendIndicator('open-rate-trend', openRateTrend);
+                updateTrendIndicator('ctr-trend', ctrTrend);
+                updateTrendIndicator('conversion-rate-trend', conversionRateTrend);
+            };
+
+            // Renders the recent campaigns table
+            const renderCampaignsTable = (campaigns) => {
+                const tableBody = document.getElementById('campaigns-table-body');
+                tableBody.innerHTML = ''; // Clear previous content
+
+                // Sort campaigns by send date, newest first
+                const sortedCampaigns = [...campaigns].sort((a, b) => new Date(b.sendDate) - new Date(a.sendDate));
+
+                sortedCampaigns.slice(0, 10).forEach(campaign => { // Show top 10 recent campaigns
+                    const row = document.createElement('tr');
+                    row.className = 'table-row hover:bg-indigo-50 transition-colors cursor-pointer'; // Add hover effect and cursor
+                    row.dataset.campaignId = campaign.id; // Store campaign ID for click event
+                    row.innerHTML = `
+                        <td class="whitespace-nowrap font-medium text-gray-900">${campaign.name}</td>
+                        <td class="whitespace-nowrap text-gray-700">${campaign.sendDate}</td>
+                        <td class="whitespace-nowrap text-gray-700">${campaign.recipients.toLocaleString()}</td>
+                        <td class="whitespace-nowrap text-gray-700">${(campaign.openRate * 100).toFixed(1)}%</td>
+                        <td class="whitespace-nowrap text-gray-700">${(campaign.ctr * 100).toFixed(1)}%</td>
+                        <td class="whitespace-nowrap text-gray-700">${(campaign.conversionRate * 100).toFixed(1)}%</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+
+                // Add event listeners for opening campaign details
+                tableBody.querySelectorAll('.table-row').forEach(row => {
+                    row.addEventListener('click', (event) => {
+                        const campaignId = event.currentTarget.dataset.campaignId;
+                        const campaign = allCampaigns.find(c => c.id === campaignId);
+                        if (campaign) {
+                            displayCampaignDetails(campaign);
+                        }
+                    });
+                });
+            };
+
+            // Displays campaign details in a modal
+            const displayCampaignDetails = (campaign) => {
+                document.getElementById('detail-campaign-name').textContent = campaign.name;
+                document.getElementById('detail-send-date').textContent = campaign.sendDate;
+                document.getElementById('detail-recipients').textContent = campaign.recipients.toLocaleString();
+                document.getElementById('detail-open-rate').textContent = `${(campaign.openRate * 100).toFixed(1)}%`;
+                document.getElementById('detail-ctr').textContent = `${(campaign.ctr * 100).toFixed(1)}%`;
+                document.getElementById('detail-conversion-rate').textContent = `${(campaign.conversionRate * 100).toFixed(1)}%`;
+                document.getElementById('detail-subject-line').textContent = campaign.subjectLine;
+                document.getElementById('detail-audience-segment').textContent = campaign.audienceSegment;
+                document.getElementById('detail-email-content-preview').innerHTML = campaign.emailContent; // Render HTML content
+
+                openModal('campaign-detail-modal');
+            };
+
+
+            // Renders the A/B test results
+            const renderABTestResults = (abTests) => {
+                const container = document.getElementById('ab-test-results');
+                container.innerHTML = ''; // Clear previous content
+
+                abTests.forEach(test => {
+                    const winner = test.variantA.openRate > test.variantB.openRate ? test.variantA : test.variantB;
+                    const loser = test.variantA.openRate <= test.variantB.openRate ? test.variantA : test.variantB;
+
+                    const winnerMetric = (winner.openRate * 100).toFixed(1);
+                    const loserMetric = (loser.openRate * 100).toFixed(1);
+                    const percentageDiff = (((winner.openRate - loser.openRate) / loser.openRate) * 100).toFixed(1);
+
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    card.innerHTML = `
+                        <h3 class="text-xl font-semibold text-gray-800 mb-4">${test.name}</h3>
+                        <p class="text-gray-600 mb-4">Test Type: <span class="font-medium">${test.type}</span> | Sent: ${test.sendDate}</p>
+
+                        <div class="grid grid-cols-2 gap-4 text-center mb-6">
+                            <div class="p-4 bg-blue-50 rounded-lg">
+                                <p class="text-sm text-gray-500">Variant A</p>
+                                <p class="font-bold text-lg text-blue-700">${test.variantA.label}</p>
+                                <p class="text-sm text-gray-600 mt-2">Open Rate: <span class="font-semibold">${(test.variantA.openRate * 100).toFixed(1)}%</span></p>
+                                <p class="text-sm text-gray-600">CTR: <span class="font-semibold">${(test.variantA.ctr * 100).toFixed(1)}%</span></p>
+                                <p class="text-sm text-gray-600">Conversions: <span class="font-semibold">${(test.variantA.conversionRate * 100).toFixed(1)}%</span></p>
+                            </div>
+                            <div class="p-4 bg-purple-50 rounded-lg">
+                                <p class="text-sm text-gray-500">Variant B</p>
+                                <p class="font-bold text-lg text-purple-700">${test.variantB.label}</p>
+                                <p class="text-sm text-gray-600 mt-2">Open Rate: <span class="font-semibold">${(test.variantB.openRate * 100).toFixed(1)}%</span></p>
+                                <p class="text-sm text-gray-600">CTR: <span class="font-semibold">${(test.variantB.ctr * 100).toFixed(1)}%</span></p>
+                                <p class="text-sm text-gray-600">Conversions: <span class="font-semibold">${(test.variantB.conversionRate * 100).toFixed(1)}%</span></p>
+                            </div>
+                        </div>
+
+                        <div class="text-center bg-green-50 text-green-800 p-3 rounded-lg font-medium">
+                            <p>Winner: <span class="font-bold">${winner.label}</span> with <span class="font-bold">${winnerMetric}%</span> Open Rate</p>
+                            <p class="text-sm mt-1">(${percentageDiff}% better than ${loser.label})</p>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            };
+
+            // Renders the performance trend chart using Chart.js
+            let performanceChartInstance = null; // Store chart instance to destroy/update
+            const renderPerformanceChart = (monthlyPerformance) => {
+                const ctx = document.getElementById('performanceChart').getContext('2d');
+
+                if (performanceChartInstance) {
+                    performanceChartInstance.destroy(); // Destroy previous instance before creating a new one
+                }
+
+                const labels = monthlyPerformance.map(d => d.month);
+                const openRates = monthlyPerformance.map(d => (d.openRate * 100).toFixed(1));
+                const ctrs = monthlyPerformance.map(d => (d.ctr * 100).toFixed(1));
+                const conversionRates = monthlyPerformance.map(d => (d.conversionRate * 100).toFixed(1));
+
+                performanceChartInstance = new Chart(ctx, {
+                    type: 'line',
                     data: {
                         labels: labels,
-                        datasets: [{
-                            label: 'Open Rate (%)',
-                            data: data,
-                            backgroundColor: ['rgba(59, 130, 246, 0.7)', 'rgba(79, 70, 229, 0.7)', 'rgba(251, 191, 36, 0.7)'], // blue, indigo, yellow
-                            borderColor: ['rgba(59, 130, 246, 1)', 'rgba(79, 70, 229, 1)', 'rgba(251, 191, 36, 1)'],
-                            borderWidth: 1,
-                            borderRadius: 8,
-                        }]
+                        datasets: [
+                            {
+                                label: 'Avg. Open Rate (%)',
+                                data: openRates,
+                                borderColor: '#4f46e5', // Indigo
+                                backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                                tension: 0.3,
+                                fill: true
+                            },
+                            {
+                                label: 'Avg. CTR (%)',
+                                data: ctrs,
+                                borderColor: '#a855f7', // Purple
+                                backgroundColor: 'rgba(168, 85, 247, 0.1)',
+                                tension: 0.3,
+                                fill: true
+                            },
+                            {
+                                label: 'Avg. Conversion Rate (%)',
+                                data: conversionRates,
+                                borderColor: '#f97316', // Orange
+                                backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                                tension: 0.3,
+                                fill: true
+                            }
+                        ]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: {
-                            legend: {
+                            title: {
                                 display: false,
+                                text: 'Monthly Campaign Performance'
                             },
                             tooltip: {
                                 callbacks: {
                                     label: function(context) {
-                                        return `${context.label}: ${context.raw.toFixed(2)}%`;
+                                        return `${context.dataset.label}: ${context.raw}%`;
                                     }
                                 }
                             }
@@ -322,248 +753,244 @@
                                 beginAtZero: true,
                                 title: {
                                     display: true,
-                                    text: 'Open Rate (%)'
-                                }
-                            },
-                            x: {
-                                title: {
-                                    display: true,
-                                    text: 'Subject Line Version'
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-
-            function createConversionRateChart(labels, data) {
-                const ctx = document.getElementById('conversionRateChart').getContext('2d');
-                if (conversionRateChartInstance) {
-                    conversionRateChartInstance.destroy(); // Destroy previous instance if it exists
-                }
-                conversionRateChartInstance = new Chart(ctx, {
-                    type: 'pie',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Conversion Rate (%)',
-                            data: data,
-                            backgroundColor: [
-                                'rgba(16, 185, 129, 0.7)', // green
-                                'rgba(245, 158, 11, 0.7)',  // amber
-                                'rgba(139, 92, 246, 0.7)',   // purple
-                                'rgba(239, 68, 68, 0.7)' // red
-                            ],
-                            borderColor: [
-                                'rgba(16, 185, 129, 1)',
-                                'rgba(245, 158, 11, 1)',
-                                'rgba(139, 92, 246, 1)',
-                                'rgba(239, 68, 68, 1)'
-                            ],
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'right',
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        const label = context.label || '';
-                                        const value = context.raw;
-                                        return `${label}: ${value.toFixed(2)}%`;
+                                    text: 'Percentage (%)'
+                                },
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + '%';
                                     }
                                 }
                             }
                         }
                     }
                 });
-            }
+            };
 
-            // --- Data Fetching and Render Dashboard ---
-            async function fetchDataAndRenderDashboard(startDate, endDate) {
-                loadingIndicator.classList.remove('hidden');
-                dashboardContent.classList.add('hidden');
+            return {
+                renderKeyMetrics,
+                renderCampaignsTable,
+                renderABTestResults,
+                renderPerformanceChart,
+                displayCampaignDetails // Expose for external use
+            };
+        })();
 
-                try {
-                    // IMPORTANT: You MUST replace 'http://127.0.0.1:5000' with the actual public URL
-                    // of your deployed Flask backend.
-                    // Examples:
-                    //   - If deployed to Heroku: 'https://your-flask-app-name.herokuapp.com'
-                    //   - If deployed to Render: 'https://your-flask-app-name.onrender.com'
-                    // If you are running locally, keep it as 'http://127.0.0.1:5000'.
-                    const BASE_URL = 'http://127.0.0.1:5000'; // <--- **CRITICAL: CHANGE THIS FOR DEPLOYMENT**
+        // --- Insights Generator Module ---
+        // This module analyzes data and generates actionable insights.
+        const InsightsGenerator = (() => {
+            let currentInsights = []; // Store current insights to manage dismissal
 
-                    // Step 1: Fetch filtered raw data from the backend
-                    const dataResponse = await fetch(`${BASE_URL}/api/data?startDate=${startDate}&endDate=${endDate}`);
-                    if (!dataResponse.ok) {
-                        const errorText = await dataResponse.text();
-                        throw new Error(`HTTP error! Status: ${dataResponse.status}. Details: ${errorText}`);
-                    }
-                    const filteredData = await dataResponse.json();
+            const generateInsights = (campaigns, abTests, monthlyPerformance) => {
+                const insights = [];
 
-                    // Step 2: Send filtered data to backend for KPI calculation
-                    const kpisResponse = await fetch(`${BASE_URL}/api/kpis`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ data: filteredData })
-                    });
-                    if (!kpisResponse.ok) {
-                        const errorText = await kpisResponse.text();
-                        throw new Error(`HTTP error! Status: ${kpisResponse.status}. Details: ${errorText}`);
-                    }
-                    const overallKPIs = await kpisResponse.json();
-
-                    // Step 3: Send filtered data to backend for Segment Analysis
-                    const segmentsResponse = await fetch(`${BASE_URL}/api/segments`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ data: filteredData })
-                    });
-                    if (!segmentsResponse.ok) {
-                        const errorText = await segmentsResponse.text();
-                        throw new Error(`HTTP error! Status: ${segmentsResponse.status}. Details: ${errorText}`);
-                    }
-                    const segmentData = await segmentsResponse.json();
-
-                    // Step 4: Send filtered data to backend for A/B Test Results
-                    const abTestResponse = await fetch(`${BASE_URL}/api/ab_test`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ data: filteredData })
-                    });
-                    if (!abTestResponse.ok) {
-                        const errorText = await abTestResponse.text();
-                        throw new Error(`HTTP error! Status: ${abTestResponse.status}. Details: ${errorText}`);
-                    }
-                    const abTestResults = await abTestResponse.json();
-
-                    // --- Populate UI with fetched data ---
-
-                    // Populate overall KPIs
-                    document.getElementById('totalEmails').textContent = overallKPIs.TotalEmailsSent.toLocaleString();
-                    document.getElementById('openRate').textContent = `${overallKPIs.OpenRate.toFixed(2)}%`;
-                    document.getElementById('conversionRate').textContent = `${overallKPIs.ConversionRate.toFixed(2)}%`;
-
-                    // Populate A/B Test Results
-                    if (abTestResults && abTestResults.test_type === 'A/B Test') {
-                        document.getElementById('abTestSentA').textContent = abTestResults.total_A.toLocaleString();
-                        document.getElementById('abTestConversionsA').textContent = abTestResults.success_A.toLocaleString();
-                        document.getElementById('abTestRateA').textContent = `${abTestResults.rate_A.toFixed(2)}%`;
-
-                        document.getElementById('abTestSentB').textContent = abTestResults.total_B.toLocaleString();
-                        document.getElementById('abTestConversionsB').textContent = abTestResults.success_B.toLocaleString();
-                        document.getElementById('abTestRateB').textContent = `${abTestResults.rate_B.toFixed(2)}%`;
-
-                        const abTestConclusionElement = document.getElementById('abTestConclusion');
-                        if (abTestResults.significant) {
-                            abTestConclusionElement.innerHTML = `
-                                <p class="font-semibold">Conclusion:</p>
-                                <p>The difference in conversion rate between '${abTestResults.version_A}' and '${abTestResults.version_B}' is statistically significant (p = ${abTestResults.p_value.toFixed(5)} < 0.05). '${abTestResults.winner}' performed better.</p>
-                            `;
-                            abTestConclusionElement.classList.remove('bg-blue-50', 'border-blue-200', 'text-blue-800', 'bg-yellow-50', 'border-yellow-200', 'text-yellow-800');
-                            abTestConclusionElement.classList.add('bg-green-50', 'border-green-200', 'text-green-800');
-                        } else {
-                            abTestConclusionElement.innerHTML = `
-                                <p class="font-semibold">Conclusion:</p>
-                                <p>The difference in conversion rate between '${abTestResults.version_A}' and '${abTestResults.version_B}' is NOT statistically significant (p = ${abTestResults.p_value.toFixed(5)} >= 0.05). More data or a larger effect size might be needed.</p>
-                            `;
-                            abTestConclusionElement.classList.remove('bg-green-50', 'border-green-200', 'text-green-800', 'bg-blue-50', 'border-blue-200', 'text-blue-800');
-                            abTestConclusionElement.classList.add('bg-yellow-50', 'border-yellow-200', 'text-yellow-800');
-                        }
-                    } else {
-                        document.getElementById('abTestSentA').textContent = 'N/A';
-                        document.getElementById('abTestConversionsA').textContent = 'N/A';
-                        document.getElementById('abTestRateA').textContent = 'N/A';
-                        document.getElementById('abTestSentB').textContent = 'N/A';
-                        document.getElementById('abTestConversionsB').textContent = 'N/A';
-                        document.getElementById('abTestRateB').textContent = 'N/A';
-                        document.getElementById('abTestConclusion').innerHTML = `<p class="font-semibold">Conclusion:</p><p>A/B test could not be performed with available data or versions.</p>`;
-                        document.getElementById('abTestConclusion').classList.remove('bg-green-50', 'border-green-200', 'text-green-800', 'bg-blue-50', 'border-blue-200', 'text-blue-800');
-                        document.getElementById('abTestConclusion').classList.add('bg-gray-50', 'border-gray-200', 'text-gray-800');
-                    }
-
-
-                    // Populate Segment Data
-                    const segmentTableBody = document.getElementById('segmentTableBody');
-                    segmentTableBody.innerHTML = ''; // Clear existing rows
-                    if (segmentData && segmentData.length > 0) {
-                        segmentData.forEach(segment => {
-                            const row = `
-                                <tr>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${segment.segment}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${segment.total_sent.toLocaleString()}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${segment.open_rate.toFixed(2)}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${segment.click_rate.toFixed(2)}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${segment.conversion_rate.toFixed(2)}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${segment.revenue_per_email.toFixed(2)}</td>
-                                </tr>
-                            `;
-                            segmentTableBody.insertAdjacentHTML('beforeend', row);
+                // Insight 1: Optimal Content/Timing (based on your project description)
+                const recentCampaigns = campaigns.filter(c => new Date(c.sendDate) > new Date(new Date().setMonth(new Date().getMonth() - 3))); // Last 3 months
+                if (recentCampaigns.length > 0) {
+                    const highPerformingCampaigns = recentCampaigns.filter(c =>
+                        c.ctr > 0.05 && (c.name.includes("Weekly") || c.name.includes("Update") || c.name.includes("Wins"))
+                    );
+                    if (highPerformingCampaigns.length > 0) {
+                        insights.push({
+                            id: 'insight-1',
+                            title: "Optimal Content/Timing Alert",
+                            description: "Campaigns focusing on 'Weekly Updates' or 'Marketing Wins' tend to have higher engagement. Consider sending these on Tuesday/Thursday mornings for best results based on simulated data."
                         });
-                    } else {
-                         segmentTableBody.innerHTML = `<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">No segment data available for this period.</td></tr>`;
                     }
-
-
-                    // Update Charts with fetched data
-                    // For Open Rate Chart: Need to extract labels and data for subject line versions from filteredData
-                    const subjectLineOpenRates = filteredData.reduce((acc, email) => {
-                        if (!acc[email.subject_line_version]) {
-                            acc[email.subject_line_version] = { opened: 0, total: 0 };
-                        }
-                        acc[email.subject_line_version].total++;
-                        if (email.opened) {
-                            acc[email.subject_line_version].opened++;
-                        }
-                        return acc;
-                    }, {});
-
-                    const openRateLabels = Object.keys(subjectLineOpenRates);
-                    const openRateData = openRateLabels.map(label => {
-                        const { opened, total } = subjectLineOpenRates[label];
-                        return total > 0 ? (opened / total) * 100 : 0;
-                    });
-                    createOpenRateChart(openRateLabels, openRateData);
-
-
-                    // For Conversion Rate Chart: Use segmentData directly
-                    const conversionRateLabels = segmentData.map(s => s.segment);
-                    const conversionRateValues = segmentData.map(s => s.conversion_rate);
-                    createConversionRateChart(conversionRateLabels, conversionRateValues);
-
-                } catch (error) {
-                    console.error("Failed to fetch data:", error);
-                    // Display a more informative error message to the user
-                    dashboardContent.innerHTML = `<div class="p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">
-                                                    <p class="font-bold">Error loading data:</p>
-                                                    <p>A network error occurred: ${error.message}.</p>
-                                                    <p>This usually means the backend server is not running or is not accessible from where this page is hosted.</p>
-                                                    <p>Please ensure:</p>
-                                                    <ul class="list-disc list-inside ml-4">
-                                                        <li>Your Flask backend (`app.py`) is running on a server.</li>
-                                                        <li>The <code>BASE_URL</code> variable in this <code>index.html</code> file (around line 874) is correctly set to the public URL of your deployed Flask backend.</li>
-                                                        <li>There are no firewall or network issues blocking access to the backend.</li>
-                                                    </ul>
-                                                  </div>`;
-                } finally {
-                    loadingIndicator.classList.add('hidden');
-                    dashboardContent.classList.remove('hidden');
                 }
-            }
 
-            // Initial data load
-            fetchDataAndRenderDashboard(startDateInput.value, endDateInput.value);
+                // Insight 2: Subject Line Impact (based on your A/B test simulation)
+                const subjectLineTests = abTests.filter(test => test.type === "Subject Line");
+                subjectLineTests.forEach((test, index) => {
+                    const winner = test.variantA.openRate > test.variantB.openRate ? test.variantA : test.variantB;
+                    const loser = test.variantA.openRate <= test.variantB.openRate ? test.variantA : test.variantB;
+                    const percentageDiff = (((winner.openRate - loser.openRate) / loser.openRate) * 100).toFixed(0);
+                    if (percentageDiff > 10) {
+                        insights.push({
+                            id: `insight-2-${index}`,
+                            title: `Subject Line Success: "${winner.label}"`,
+                            description: `Your A/B test showed that subject line "${winner.label}" increased open rates by ${percentageDiff}% compared to "${loser.label}". Leverage emojis/action-oriented language in future subject lines.`
+                        });
+                    }
+                });
 
-            // Event listener for apply filter button
-            applyFilterBtn.addEventListener('click', () => {
-                fetchDataAndRenderDashboard(startDateInput.value, endDateInput.value);
-            });
+                // Insight 3: CTA Performance (based on your A/B test simulation)
+                const ctaTests = abTests.filter(test => test.type === "CTA");
+                ctaTests.forEach((test, index) => {
+                    const winner = test.variantA.ctr > test.variantB.ctr ? test.variantA : test.variantB;
+                    const loser = test.variantA.ctr <= test.variantB.ctr ? test.variantA : test.variantB;
+                    const percentageDiff = (((winner.ctr - loser.ctr) / loser.ctr) * 100).toFixed(0);
+                    if (percentageDiff > 20) {
+                        insights.push({
+                            id: `insight-3-${index}`,
+                            title: `CTA Optimization: "${winner.label}"`,
+                            description: `Button CTAs like "${winner.label}" improved click-through rates by ${percentageDiff}% over text links. Prioritize prominent, clear button CTAs in your email designs.`
+                        });
+                    }
+                });
+
+                // Insight 4: Mobile Optimization (Simulated from general trend)
+                if (Math.random() > 0.3) {
+                    insights.push({
+                        id: 'insight-4',
+                        title: "Mobile Engagement Dominance",
+                        description: "Simulated data suggests over 65% of your audience engages with emails on mobile devices. Ensure all future templates are rigorously tested for mobile responsiveness and readability."
+                    });
+                }
+
+                // Insight 5: Conversion Rate Trend
+                if (monthlyPerformance.length >= 2) {
+                    const lastMonthConversion = monthlyPerformance[monthlyPerformance.length - 1].conversionRate;
+                    const avgPrevMonthsConversion = monthlyPerformance.slice(0, monthlyPerformance.length - 1)
+                                                        .reduce((sum, d) => sum + d.conversionRate, 0) / (monthlyPerformance.length - 1);
+                    if (lastMonthConversion < avgPrevMonthsConversion * 0.9) {
+                        insights.push({
+                            id: 'insight-5-down',
+                            title: "Conversion Rate Dip Detected",
+                            description: "Your recent conversion rates show a slight decline. Review landing page experiences, offer clarity, and post-click funnels for potential friction points."
+                        });
+                    } else if (lastMonthConversion > avgPrevMonthsConversion * 1.05) {
+                         insights.push({
+                            id: 'insight-5-up',
+                            title: "Conversion Rate Improvement!",
+                            description: "Great news! Your recent conversion rates have improved. Analyze recent successful campaigns to identify key drivers and replicate winning strategies."
+                        });
+                    }
+                }
+
+                currentInsights = insights; // Update the stored insights
+                return insights;
+            };
+
+            // Renders the generated insights to the UI
+            const renderInsights = (insightsToRender) => {
+                const container = document.getElementById('insights-container');
+                container.innerHTML = ''; // Clear previous content
+
+                if (insightsToRender.length === 0) {
+                    container.innerHTML = '<p class="text-gray-600">No new actionable insights at this moment. Keep optimizing!</p>';
+                    return;
+                }
+
+                insightsToRender.forEach(insight => {
+                    const insightCard = document.createElement('div');
+                    insightCard.className = 'insight-card';
+                    insightCard.dataset.insightId = insight.id; // Add data attribute for dismissal
+                    insightCard.innerHTML = `
+                        <div>
+                            <h3 class="font-semibold text-gray-800 mb-1">${insight.title}</h3>
+                            <p class="text-gray-700">${insight.description}</p>
+                        </div>
+                        <button class="text-gray-400 hover:text-gray-600 ml-4" onclick="InsightsGenerator.dismissInsight('${insight.id}')">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    `;
+                    container.appendChild(insightCard);
+                });
+            };
+
+            // Dismisses an insight from the UI and internal list
+            const dismissInsight = (insightId) => {
+                currentInsights = currentInsights.filter(insight => insight.id !== insightId);
+                renderInsights(currentInsights); // Re-render insights
+                showToast('Insight dismissed!');
+            };
+
+            return {
+                generateInsights,
+                renderInsights,
+                dismissInsight // Expose dismiss function
+            };
+        })();
+
+
+        // --- Main Application Logic ---
+        function initializeDashboard() {
+            document.getElementById('loading-overlay').classList.remove('hidden'); // Show loading overlay
+
+            setTimeout(() => { // Simulate loading time
+                // 1. Generate all mock data
+                const { campaigns, abTests, monthlyPerformance } = DataSimulator.generateMockData(15, 3); // 15 campaigns, 3 A/B tests
+                allCampaigns = campaigns; // Store globally
+                allABTests = abTests;
+                allMonthlyPerformance = monthlyPerformance;
+
+                // 2. Render key metrics
+                UIRenderer.renderKeyMetrics(allCampaigns, allMonthlyPerformance);
+
+                // 3. Render recent campaigns table
+                UIRenderer.renderCampaignsTable(allCampaigns);
+
+                // 4. Render A/B test results
+                UIRenderer.renderABTestResults(allABTests);
+
+                // 5. Render performance trend chart
+                UIRenderer.renderPerformanceChart(allMonthlyPerformance);
+
+                // 6. Generate and render actionable insights
+                const insights = InsightsGenerator.generateInsights(allCampaigns, allABTests, allMonthlyPerformance);
+                InsightsGenerator.renderInsights(insights);
+
+                document.getElementById('loading-overlay').classList.add('hidden'); // Hide loading overlay
+                showToast('Dashboard loaded successfully!');
+
+            }, 1500); // Simulate 1.5 seconds loading
+        }
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', initializeDashboard);
+
+        // Create New Campaign Button
+        document.getElementById('create-campaign-btn').addEventListener('click', () => {
+            openModal('create-campaign-modal');
         });
+
+        // Handle Create Campaign Form Submission
+        document.getElementById('create-campaign-form').addEventListener('submit', (event) => {
+            event.preventDefault(); // Prevent default form submission
+
+            const campaignName = document.getElementById('campaign-name').value;
+            const subjectLine = document.getElementById('subject-line').value;
+            const audienceSegment = document.getElementById('audience-segment').value;
+            const emailContent = document.getElementById('email-content').value;
+
+            // Simulate creating a new campaign
+            const newCampaign = {
+                id: `campaign-${allCampaigns.length + 1}`,
+                name: campaignName,
+                subjectLine: subjectLine,
+                audienceSegment: audienceSegment,
+                emailContent: emailContent,
+                sendDate: new Date().toISOString().split('T')[0],
+                recipients: Math.floor(Math.random() * 5000) + 500, // Random recipients
+                openRate: parseFloat(DataSimulator.generateRandomNumber(0.25, 0.40).toFixed(3)),
+                ctr: parseFloat(DataSimulator.generateRandomNumber(0.03, 0.07).toFixed(3)),
+                conversionRate: parseFloat(DataSimulator.generateRandomNumber(0.015, 0.04).toFixed(3)),
+                isABTest: false
+            };
+
+            allCampaigns.unshift(newCampaign); // Add to the beginning of the array
+
+            // Re-render relevant sections
+            UIRenderer.renderKeyMetrics(allCampaigns, allMonthlyPerformance);
+            UIRenderer.renderCampaignsTable(allCampaigns);
+            const insights = InsightsGenerator.generateInsights(allCampaigns, allABTests, allMonthlyPerformance);
+            InsightsGenerator.renderInsights(insights);
+
+            closeModal('create-campaign-modal');
+            document.getElementById('create-campaign-form').reset(); // Clear form
+            showToast('Campaign created successfully!', 4000);
+        });
+
+        // Campaign Search/Filter
+        document.getElementById('campaign-search').addEventListener('keyup', (event) => {
+            const searchTerm = event.target.value.toLowerCase();
+            const filteredCampaigns = allCampaigns.filter(campaign =>
+                campaign.name.toLowerCase().includes(searchTerm) ||
+                campaign.subjectLine.toLowerCase().includes(searchTerm)
+            );
+            UIRenderer.renderCampaignsTable(filteredCampaigns);
+        });
+
     </script>
 </body>
 </html>
