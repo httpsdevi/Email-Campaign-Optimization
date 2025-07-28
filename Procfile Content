@@ -1,0 +1,11 @@
+web: gunicorn app:app --log-file -
+
+Explanation:
+
+web:: This tells the hosting platform (like Heroku or Render) that this is a web process.
+
+gunicorn: This is a production-ready Python WSGI HTTP server. It's much more robust for serving Flask applications in a production environment than Flask's built-in development server.
+
+app:app: This specifies that Gunicorn should run the app instance (the second app) found within the app.py file (the first app).
+
+--log-file -: This tells Gunicorn to send its logs to standard output, which is how most cloud platforms collect logs.
