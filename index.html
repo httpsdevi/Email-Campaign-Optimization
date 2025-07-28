@@ -390,14 +390,20 @@
                 dashboardContent.classList.add('hidden');
 
                 try {
-                    // Step 1: Fetch filtered raw data from the backend
-                    // IMPORTANT: Ensure your Flask server (app.py) is running on http://127.0.0.1:5000/
-                    // You must access index.html via the Flask server's URL (e.g., http://127.0.0.1:5000/)
-                    // and NOT by opening the local file directly (file:///...).
-                    const BASE_URL = 'http://127.0.0.1:5000'; // Explicitly define the base URL of your Flask server
+                    // IMPORTANT: You MUST replace 'http://127.0.0.1:5000' with the actual public URL
+                    // of your deployed Flask backend.
+                    // Examples:
+                    //   - If deployed to Heroku: 'https://your-flask-app-name.herokuapp.com'
+                    //   - If deployed to Render: 'https://your-flask-app-name.onrender.com'
+                    // If you are running locally, keep it as 'http://127.0.0.1:5000'.
+                    const BASE_URL = 'http://127.0.0.1:5000'; // <--- **CRITICAL: CHANGE THIS FOR DEPLOYMENT**
 
+                    // Step 1: Fetch filtered raw data from the backend
                     const dataResponse = await fetch(`${BASE_URL}/api/data?startDate=${startDate}&endDate=${endDate}`);
-                    if (!dataResponse.ok) throw new Error(`HTTP error! status: ${dataResponse.status}`);
+                    if (!dataResponse.ok) {
+                        const errorText = await dataResponse.text();
+                        throw new Error(`HTTP error! Status: ${dataResponse.status}. Details: ${errorText}`);
+                    }
                     const filteredData = await dataResponse.json();
 
                     // Step 2: Send filtered data to backend for KPI calculation
@@ -406,7 +412,10 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ data: filteredData })
                     });
-                    if (!kpisResponse.ok) throw new Error(`HTTP error! status: ${kpisResponse.status}`);
+                    if (!kpisResponse.ok) {
+                        const errorText = await kpisResponse.text();
+                        throw new Error(`HTTP error! Status: ${kpisResponse.status}. Details: ${errorText}`);
+                    }
                     const overallKPIs = await kpisResponse.json();
 
                     // Step 3: Send filtered data to backend for Segment Analysis
@@ -415,7 +424,10 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ data: filteredData })
                     });
-                    if (!segmentsResponse.ok) throw new Error(`HTTP error! status: ${segmentsResponse.status}`);
+                    if (!segmentsResponse.ok) {
+                        const errorText = await segmentsResponse.text();
+                        throw new Error(`HTTP error! Status: ${segmentsResponse.status}. Details: ${errorText}`);
+                    }
                     const segmentData = await segmentsResponse.json();
 
                     // Step 4: Send filtered data to backend for A/B Test Results
@@ -424,7 +436,10 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ data: filteredData })
                     });
-                    if (!abTestResponse.ok) throw new Error(`HTTP error! status: ${abTestResponse.status}`);
+                    if (!abTestResponse.ok) {
+                        const errorText = await abTestResponse.text();
+                        throw new Error(`HTTP error! Status: ${abTestResponse.status}. Details: ${errorText}`);
+                    }
                     const abTestResults = await abTestResponse.json();
 
                     // --- Populate UI with fetched data ---
@@ -523,10 +538,17 @@
 
                 } catch (error) {
                     console.error("Failed to fetch data:", error);
-                    // Display an error message to the user
+                    // Display a more informative error message to the user
                     dashboardContent.innerHTML = `<div class="p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">
                                                     <p class="font-bold">Error loading data:</p>
-                                                    <p>${error.message}. Please ensure the Flask server is running and accessible at its base URL (e.g., http://127.0.0.1:5000/).</p>
+                                                    <p>A network error occurred: ${error.message}.</p>
+                                                    <p>This usually means the backend server is not running or is not accessible from where this page is hosted.</p>
+                                                    <p>Please ensure:</p>
+                                                    <ul class="list-disc list-inside ml-4">
+                                                        <li>Your Flask backend (`app.py`) is running on a server.</li>
+                                                        <li>The <code>BASE_URL</code> variable in this <code>index.html</code> file (around line 874) is correctly set to the public URL of your deployed Flask backend.</li>
+                                                        <li>There are no firewall or network issues blocking access to the backend.</li>
+                                                    </ul>
                                                   </div>`;
                 } finally {
                     loadingIndicator.classList.add('hidden');
