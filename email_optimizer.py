@@ -8,46 +8,61 @@ import random
 # --- 1. Synthetic Data Generation ---
 def generate_synthetic_data(num_records=5000):
     """
-    Generates synthetic email campaign data for demonstration purposes.
-    Includes A/B test variations.
+    Generates a synthetic dataset for email campaign analysis. This function creates
+    a DataFrame that mimics real-world email marketing data, including various
+    campaign attributes and simulated user interactions. It's designed for
+    demonstration and testing the analytics framework without needing live data.
+
+    The data includes variations for A/B testing (e.g., different subject lines)
+    and ensures logical dependencies between actions (e.g., a click can only
+    occur if an email was first opened).
+
+    Args:
+        num_records (int): The total number of email send records to generate.
+
+    Returns:
+        pd.DataFrame: A DataFrame containing the synthetic email campaign data.
     """
-    print("Generating synthetic email campaign data...")
+    print(f"Initiating synthetic email campaign data generation for {num_records} records...")
 
     data = {
-        'campaign_id': np.random.choice(['Campaign_A', 'Campaign_B', 'Campaign_C', 'Campaign_D'], num_records),
+        'campaign_id': np.random.choice(['Campaign_A', 'Campaign_B', 'Campaign_C', 'Campaign_D', 'Campaign_E'], num_records),
         'email_id': [f'email_{i+1}' for i in range(num_records)],
-        'user_id': np.random.randint(1000, 5000, num_records),
+        'user_id': np.random.randint(1000, 6000, num_records),
         'timestamp_sent': [datetime.datetime.now() - datetime.timedelta(days=random.randint(0, 60),
                                                                         hours=random.randint(0, 23),
                                                                         minutes=random.randint(0, 59))
                            for _ in range(num_records)],
-        'subject_line_version': np.random.choice(['Version A: Exciting Offer!', 'Version B: Don\'t Miss Out!'], num_records),
-        'email_content_version': np.random.choice(['Content X', 'Content Y'], num_records),
-        'opened': np.random.choice([0, 1], num_records, p=[0.7, 0.3]), # 30% open rate
-        'clicked': np.random.choice([0, 1], num_records, p=[0.85, 0.15]), # 15% click rate (of all sent)
-        'converted': np.random.choice([0, 1], num_records, p=[0.95, 0.05]), # 5% conversion rate (of all sent)
-        'revenue': np.random.uniform(0, 50, num_records) * np.random.choice([0, 1], num_records, p=[0.9, 0.1]), # 10% chance of revenue
-        'segment': np.random.choice(['New User', 'Loyal Customer', 'Churn Risk'], num_records)
+        'subject_line_version': np.random.choice(['Version A: Exciting Offer!', 'Version B: Don\'t Miss Out!', 'Version C: Limited Time Deal'], num_records),
+        'email_content_version': np.random.choice(['Content X', 'Content Y', 'Content Z'], num_records),
+        'opened': np.random.choice([0, 1], num_records, p=[0.7, 0.3]),
+        'clicked': np.random.choice([0, 1], num_records, p=[0.85, 0.15]),
+        'converted': np.random.choice([0, 1], num_records, p=[0.95, 0.05]),
+        'revenue': np.random.uniform(0, 75, num_records) * np.random.choice([0, 1], num_records, p=[0.9, 0.1]),
+        'segment': np.random.choice(['New User', 'Loyal Customer', 'Churn Risk', 'High Value'], num_records)
     }
 
     df = pd.DataFrame(data)
 
-    # Ensure clicks only happen if opened
     df.loc[df['opened'] == 0, 'clicked'] = 0
-    # Ensure conversions only happen if clicked
     df.loc[df['clicked'] == 0, 'converted'] = 0
-    # Ensure revenue only happens if converted
     df.loc[df['converted'] == 0, 'revenue'] = 0
 
-    print(f"Generated {num_records} records.")
+    print(f"Successfully generated {num_records} email campaign records.")
     return df
 
 # --- 2. Performance Analytics ---
 def calculate_kpis(df):
     """
-    Calculates key performance indicators (KPIs) for email campaigns.
+    Calculates key performance indicators (KPIs) for the entire email campaign dataset.
+    Returns raw numerical values for easy JSON serialization.
+
+    Args:
+        df (pd.DataFrame): The DataFrame containing email campaign data.
+
+    Returns:
+        dict: A dictionary containing calculated KPIs as raw numbers.
     """
-    print("\nCalculating KPIs...")
     total_emails_sent = len(df)
     total_opens = df['opened'].sum()
     total_clicks = df['clicked'].sum()
@@ -55,32 +70,34 @@ def calculate_kpis(df):
     total_revenue = df['revenue'].sum()
 
     open_rate = (total_opens / total_emails_sent) * 100 if total_emails_sent > 0 else 0
-    click_through_rate = (total_clicks / total_opens) * 100 if total_opens > 0 else 0 # CTR based on opens
-    conversion_rate = (total_conversions / total_clicks) * 100 if total_clicks > 0 else 0 # Conversion based on clicks
+    click_through_rate = (total_clicks / total_opens) * 100 if total_opens > 0 else 0
+    conversion_rate = (total_conversions / total_clicks) * 100 if total_clicks > 0 else 0
     revenue_per_email = total_revenue / total_emails_sent if total_emails_sent > 0 else 0
 
     kpis = {
-        'Total Emails Sent': total_emails_sent,
-        'Total Opens': total_opens,
-        'Total Clicks': total_clicks,
-        'Total Conversions': total_conversions,
-        'Total Revenue': f"${total_revenue:.2f}",
-        'Open Rate (%)': f"{open_rate:.2f}%",
-        'Click-Through Rate (CTR) (%)': f"{click_through_rate:.2f}%",
-        'Conversion Rate (%)': f"{conversion_rate:.2f}%",
-        'Revenue per Email': f"${revenue_per_email:.2f}"
+        'TotalEmailsSent': int(total_emails_sent), # Ensure integer for JSON
+        'TotalOpens': int(total_opens),
+        'TotalClicks': int(total_clicks),
+        'TotalConversions': int(total_conversions),
+        'TotalRevenue': round(float(total_revenue), 2), # Ensure float for JSON, rounded
+        'OpenRate': round(float(open_rate), 2),
+        'ClickThroughRate': round(float(click_through_rate), 2),
+        'ConversionRate': round(float(conversion_rate), 2),
+        'RevenuePerEmail': round(float(revenue_per_email), 2)
     }
-
-    print("KPIs calculated:")
-    for key, value in kpis.items():
-        print(f"- {key}: {value}")
     return kpis
 
 def analyze_by_segment(df):
     """
-    Analyzes KPIs by user segment.
+    Analyzes key performance indicators (KPIs) broken down by user segment.
+    Returns a DataFrame suitable for conversion to JSON.
+
+    Args:
+        df (pd.DataFrame): The DataFrame containing email campaign data.
+
+    Returns:
+        pd.DataFrame: A DataFrame summarizing KPIs for each segment.
     """
-    print("\nAnalyzing KPIs by Segment...")
     segment_analysis = df.groupby('segment').agg(
         total_sent=('email_id', 'count'),
         total_opened=('opened', 'sum'),
@@ -94,42 +111,47 @@ def analyze_by_segment(df):
     segment_analysis['conversion_rate'] = (segment_analysis['total_converted'] / segment_analysis['total_clicked']) * 100
     segment_analysis['revenue_per_email'] = (segment_analysis['total_revenue'] / segment_analysis['total_sent'])
 
-    print("Segment Analysis:")
-    print(segment_analysis[['segment', 'open_rate', 'click_rate', 'conversion_rate', 'revenue_per_email']].round(2))
+    segment_analysis.fillna(0, inplace=True)
+    # Convert to standard Python types for JSON compatibility
+    segment_analysis = segment_analysis.round(2)
+    segment_analysis['total_sent'] = segment_analysis['total_sent'].astype(int)
+    segment_analysis['total_opened'] = segment_analysis['total_opened'].astype(int)
+    segment_analysis['total_clicked'] = segment_analysis['total_clicked'].astype(int)
+    segment_analysis['total_converted'] = segment_analysis['total_converted'].astype(int)
+
     return segment_analysis
 
 # --- 3. A/B Testing Framework ---
 def perform_ab_test(df, group_column, metric_column):
     """
-    Performs an A/B test using a Chi-squared test for independence.
-    Assumes metric_column is binary (e.g., opened, clicked, converted).
-    """
-    print(f"\nPerforming A/B Test on '{group_column}' for '{metric_column}'...")
+    Performs an A/B test and returns the results as a dictionary.
 
-    # Filter out rows where the metric column is not relevant (e.g., not opened for click rate)
+    Args:
+        df (pd.DataFrame): The DataFrame containing email campaign data.
+        group_column (str): The column name representing the A/B test variations.
+        metric_column (str): The binary column representing the success metric.
+
+    Returns:
+        dict or None: A dictionary containing A/B test results and conclusion, or None if test cannot be performed.
+    """
+    # Pre-filtering data for relevant metrics:
     if metric_column == 'clicked':
-        test_df = df[df['opened'] == 1].copy() # Only consider emails that were opened for click rate
+        test_df = df[df['opened'] == 1].copy()
     elif metric_column == 'converted':
-        test_df = df[df['clicked'] == 1].copy() # Only consider emails that were clicked for conversion rate
+        test_df = df[df['clicked'] == 1].copy()
     else:
         test_df = df.copy()
 
     if test_df.empty:
-        print(f"Not enough data to perform A/B test for {metric_column} after filtering.")
         return None
 
-    # Get the two unique versions for the A/B test
     versions = test_df[group_column].unique()
     if len(versions) != 2:
-        print(f"Error: A/B test requires exactly two versions in '{group_column}'. Found: {len(versions)}")
-        return None
+        return None # Cannot perform A/B test with more or less than 2 versions
 
     version_A = versions[0]
     version_B = versions[1]
 
-    # Create a contingency table
-    # Rows: Versions (A, B)
-    # Columns: Success (metric_column = 1), Failure (metric_column = 0)
     contingency_table = pd.DataFrame({
         'Success': [test_df[test_df[group_column] == version_A][metric_column].sum(),
                     test_df[test_df[group_column] == version_B][metric_column].sum()],
@@ -137,90 +159,73 @@ def perform_ab_test(df, group_column, metric_column):
                     len(test_df[test_df[group_column] == version_B]) - test_df[test_df[group_column] == version_B][metric_column].sum()]
     }, index=[version_A, version_B])
 
-    print("\nContingency Table:")
-    print(contingency_table)
-
-    # Perform Chi-squared test
     chi2, p_value, dof, expected = chi2_contingency(contingency_table)
 
-    print(f"\nChi-squared Statistic: {chi2:.2f}")
-    print(f"P-value: {p_value:.3f}")
+    alpha = 0.05
+    significant = p_value < alpha
 
-    alpha = 0.05 # Significance level
+    rate_A = (contingency_table.loc[version_A, 'Success'] / contingency_table.loc[version_A].sum()) * 100 if contingency_table.loc[version_A].sum() > 0 else 0
+    rate_B = (contingency_table.loc[version_B, 'Success'] / contingency_table.loc[version_B].sum()) * 100 if contingency_table.loc[version_B].sum() > 0 else 0
 
-    if p_value < alpha:
-        conclusion = f"The difference in {metric_column} between '{version_A}' and '{version_B}' is statistically significant (p < {alpha})."
-        if contingency_table.loc[version_A, 'Success'] / (contingency_table.loc[version_A, 'Success'] + contingency_table.loc[version_A, 'Failure']) > \
-           contingency_table.loc[version_B, 'Success'] / (contingency_table.loc[version_B, 'Success'] + contingency_table.loc[version_B, 'Failure']):
-            winner = version_A
-            loser = version_B
-        else:
-            winner = version_B
-            loser = version_A
-        print(f"Conclusion: {conclusion} '{winner}' performed better than '{loser}'.")
-        return {'test_type': 'A/B Test', 'group_column': group_column, 'metric_column': metric_column,
-                'version_A': version_A, 'version_B': version_B,
-                'success_A': contingency_table.loc[version_A, 'Success'], 'total_A': contingency_table.loc[version_A].sum(),
-                'success_B': contingency_table.loc[version_B, 'Success'], 'total_B': contingency_table.loc[version_B].sum(),
-                'chi2_statistic': chi2, 'p_value': p_value, 'significant': True, 'winner': winner}
-    else:
-        conclusion = f"The difference in {metric_column} between '{version_A}' and '{version_B}' is NOT statistically significant (p >= {alpha})."
-        print(f"Conclusion: {conclusion} More data or a larger effect size might be needed.")
-        return {'test_type': 'A/B Test', 'group_column': group_column, 'metric_column': metric_column,
-                'version_A': version_A, 'version_B': version_B,
-                'success_A': contingency_table.loc[version_A, 'Success'], 'total_A': contingency_table.loc[version_A].sum(),
-                'success_B': contingency_table.loc[version_B, 'Success'], 'total_B': contingency_table.loc[version_B].sum(),
-                'chi2_statistic': chi2, 'p_value': p_value, 'significant': False, 'winner': 'None'}
+    winner = 'None'
+    if significant:
+        winner = version_A if rate_A > rate_B else version_B
+
+    return {
+        'test_type': 'A/B Test',
+        'group_column': group_column,
+        'metric_column': metric_column,
+        'version_A': version_A,
+        'success_A': int(contingency_table.loc[version_A, 'Success']),
+        'total_A': int(contingency_table.loc[version_A].sum()),
+        'rate_A': round(rate_A, 2),
+        'version_B': version_B,
+        'success_B': int(contingency_table.loc[version_B, 'Success']),
+        'total_B': int(contingency_table.loc[version_B].sum()),
+        'rate_B': round(rate_B, 2),
+        'chi2_statistic': round(float(chi2), 4),
+        'p_value': round(float(p_value), 5),
+        'significant': significant,
+        'winner': winner
+    }
 
 # --- 4. Basic Visualization ---
+# This function remains for local file generation, but the web UI will use Chart.js
 def plot_kpis(df):
     """
-    Generates basic bar plots for KPI comparison.
+    Generates and saves basic bar plots to visually compare KPI performance.
+    These plots offer a quick and intuitive understanding of the data trends
+    and are saved as PNG files, which can then be displayed in a web interface
+    or used in reports.
     """
-    print("\nGenerating KPI plots...")
+    print("\nGenerating static KPI plots using Matplotlib...")
 
-    # Open Rate by Subject Line Version
     open_rate_by_subject = df.groupby('subject_line_version')['opened'].mean() * 100
-    plt.figure(figsize=(8, 5))
-    open_rate_by_subject.plot(kind='bar', color=['skyblue', 'lightcoral'])
-    plt.title('Open Rate by Subject Line Version')
-    plt.ylabel('Open Rate (%)')
-    plt.xticks(rotation=45, ha='right')
+    plt.figure(figsize=(10, 6))
+    open_rate_by_subject.plot(kind='bar', color=['#66b3ff', '#ff9999', '#99ff99'])
+    plt.title('Average Open Rate by Subject Line Version', fontsize=14)
+    plt.ylabel('Open Rate (%)', fontsize=12)
+    plt.xlabel('Subject Line Version', fontsize=12)
+    plt.xticks(rotation=45, ha='right', fontsize=10)
+    plt.yticks(fontsize=10)
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
     plt.tight_layout()
-    plt.savefig('open_rate_by_subject.png') # Save plot for potential web display
-    plt.close() # Close plot to free memory
-
-    # Conversion Rate by Segment
-    conversion_by_segment = df.groupby('segment')['converted'].mean() * 100
-    plt.figure(figsize=(8, 5))
-    conversion_by_segment.plot(kind='bar', color=['lightgreen', 'orange', 'purple'])
-    plt.title('Conversion Rate by User Segment')
-    plt.ylabel('Conversion Rate (%)')
-    plt.xticks(rotation=45, ha='right')
-    plt.tight_layout()
-    plt.savefig('conversion_rate_by_segment.png')
+    plt.savefig('open_rate_by_subject.png', dpi=300)
     plt.close()
 
-    print("KPI plots saved as PNG files.")
+    conversion_by_segment = df.groupby('segment')['converted'].mean() * 100
+    plt.figure(figsize=(10, 6))
+    conversion_by_segment.plot(kind='bar', color=['#ffcc99', '#c2c2f0', '#ffb3e6', '#b3d9ff'])
+    plt.title('Average Conversion Rate by User Segment', fontsize=14)
+    plt.ylabel('Conversion Rate (%)', fontsize=12)
+    plt.xlabel('User Segment', fontsize=12)
+    plt.xticks(rotation=45, ha='right', fontsize=10)
+    plt.yticks(fontsize=10)
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+    plt.tight_layout()
+    plt.savefig('conversion_rate_by_segment.png', dpi=300)
+    plt.close()
 
-# --- Main Execution ---
-if __name__ == "__main__":
-    # Generate data
-    email_df = generate_synthetic_data(num_records=10000)
+    print("KPI plots 'open_rate_by_subject.png' and 'conversion_rate_by_segment.png' have been successfully saved in high resolution.")
 
-    # Calculate overall KPIs
-    overall_kpis = calculate_kpis(email_df)
-
-    # Analyze by segment
-    segment_kpis = analyze_by_segment(email_df)
-
-    # Perform A/B test on subject line version for conversion rate
-    ab_test_results = perform_ab_test(email_df, 'subject_line_version', 'converted')
-
-    # Generate plots
-    plot_kpis(email_df)
-
-    print("\n--- Python Script Execution Complete ---")
-    print("You can now integrate these analytics into a web interface.")
-    print("The plots 'open_rate_by_subject.png' and 'conversion_rate_by_segment.png' have been saved.")
 
