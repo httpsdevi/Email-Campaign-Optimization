@@ -1,0 +1,29 @@
+Flask
+Flask-Cors
+pandas
+numpy
+scipy
+matplotlib
+gunicorn
+
+Explanation:
+
+This file lists all the Python packages your app.py and email_optimizer.py depend on.
+
+When you deploy your backend, the hosting platform will read this file and automatically install all these dependencies in your deployment environment. This ensures your application has everything it needs to run.
+
+Next Steps for Deployment:
+
+Create these two files (Procfile and requirements.txt) in the same directory as your app.py and email_optimizer.py.
+
+Commit and push all these files (including the updated app.py, email_optimizer.py, index.html, and these new Procfile and requirements.txt) to your Git repository.
+
+Deploy your backend to a platform like Heroku or Render, connecting it to your Git repository.
+
+Once your backend is deployed and running, it will provide you with a public URL.
+
+Update the BASE_URL in your index.html file to this public URL.
+
+Redeploy your index.html to Netlify.
+
+This setup will allow your Netlify frontend to correctly communicate with your deployed Python backend.
