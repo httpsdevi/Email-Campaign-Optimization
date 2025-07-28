@@ -4,6 +4,7 @@ import pandas as pd
 import datetime
 import random
 import json # To handle JSON serialization/deserialization
+import os # Import os module to get environment variables
 
 # Import the core analytical functions from your email_optimizer.py
 # Make sure email_optimizer.py is in the same directory or accessible in PYTHONPATH
@@ -61,7 +62,7 @@ def get_data():
     # Return the filtered DataFrame as a list of dictionaries (JSON)
     return jsonify(filtered_df.to_dict(orient='records'))
 
-@app.route('/api/kpis', methods=['GET'])
+@app.route('/api/kpis', methods=['POST']) # Changed to POST
 def get_kpis():
     """
     API endpoint to calculate and return overall KPIs.
@@ -75,26 +76,13 @@ def get_kpis():
         df = pd.DataFrame(data_records)
         kpis = calculate_kpis(df)
 
-        # Convert the formatted strings back to raw numbers for easier frontend parsing
-        # This is a temporary measure because email_optimizer.py currently formats them.
-        # Ideally, email_optimizer.py should return raw numbers, and frontend formats.
-        kpis_raw = {
-            'Total Emails Sent': kpis['Total Emails Sent'],
-            'Total Opens': kpis['Total Opens'],
-            'Total Clicks': kpis['Total Clicks'],
-            'Total Conversions': kpis['Total Conversions'],
-            'Total Revenue': float(kpis['Total Revenue'].replace('$', '').replace(',', '')),
-            'Open Rate (%)': float(kpis['Open Rate (%)'].replace('%', '')),
-            'Click-Through Rate (CTR) (%)': float(kpis['Click-Through Rate (CTR) (%)'].replace('%', '')),
-            'Conversion Rate (%)': float(kpis['Conversion Rate (%)'].replace('%', '')),
-            'Revenue per Email': float(kpis['Revenue per Email'].replace('$', ''))
-        }
-        return jsonify(kpis_raw)
+        # The email_optimizer.py now returns raw numbers, so no need for string parsing here.
+        return jsonify(kpis)
     except Exception as e:
         app.logger.error(f"Error calculating KPIs: {e}")
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/segments', methods=['GET'])
+@app.route('/api/segments', methods=['POST']) # Changed to POST
 def get_segments_analysis():
     """
     API endpoint to calculate and return segment-wise KPIs.
@@ -114,7 +102,7 @@ def get_segments_analysis():
         app.logger.error(f"Error analyzing segments: {e}")
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/ab_test', methods=['GET'])
+@app.route('/api/ab_test', methods=['POST']) # Changed to POST
 def get_ab_test_results():
     """
     API endpoint to perform and return A/B test results.
@@ -138,6 +126,6 @@ def get_ab_test_results():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    # Run the Flask development server
-    # In a production environment, use a production-ready WSGI server like Gunicorn or uWSGI
-    app.run(debug=True, port=5000)
+    # Use PORT environment variable for deployment platforms like Heroku/Render
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=True, host='0.0.0.0', port=port) # host='0.0.0.0' makes it accessible externally
