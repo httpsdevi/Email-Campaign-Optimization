@@ -1,0 +1,13 @@
+campaign_id,subject_line,send_time,list_size,open_rate,click_rate
+1,"🚀 Our Biggest Sale of the Year Starts Now!",2023-10-25 09:05:00,15000,22.5,2.1
+2,"A Quick Question for You",2023-10-25 14:30:00,5000,28.1,3.5
+3,"Don't Miss Out: Final Hours!",2023-10-26 18:00:00,14500,19.8,1.8
+4,"Your Weekly Tech Roundup",2023-10-27 11:00:00,8000,25.3,2.9
+5,"How to Boost Your Productivity by 50%",2023-10-28 10:15:00,6500,31.2,4.5
+6,"[Name], We Miss You!",2023-10-29 16:45:00,2500,15.5,1.1
+7,"Exclusive Offer Inside Just For You",2023-10-30 09:30:00,12000,23.1,2.5
+8,"Did you see this?",2023-10-31 13:00:00,7500,26.8,3.1
+9,"Security Alert: Please Review Your Account",2023-11-01 15:20:00,25000,35.5,5.8
+10,"The Ultimate Guide to Holiday Gifting",2023-11-02 11:45:00,9500,24.0,2.7
+11,"Last Chance for 20% Off Everything",2023-11-03 19:00:00,13000,20.5,1.9
+12,"Here's that resource you requested",2023-11-04 12:10:00,1500,45.2,10.3
