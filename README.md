@@ -266,8 +266,6 @@ email-campaign-optimizer/
 ├── app.py                 # Flask backend
 ├── index.html            # Frontend interface
 ├── static/
-│   ├── css/
-│   ├── js/
 │   └── images/
 ├── models/               # ML models
 ├── data/                 # Sample datasets
@@ -316,7 +314,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 👥 Authors
 
-- **Your Name** - *Initial work* - [YourGitHub](https://github.com/yourusername)
+- **Deblina Mandal** - *Initial work* - [YourGitHub](https://github.com/httpsdevi)
 
 ## 🙏 Acknowledgments
 
