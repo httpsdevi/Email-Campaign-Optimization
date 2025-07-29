@@ -1,0 +1,23 @@
+{
+  "name": "email-campaign-optimizer",
+  "version": "1.0.0",
+  "description": "An AI-powered system to optimize email marketing campaigns using Flask and Scikit-Learn.",
+  "main": "app.py",
+  "scripts": {
+    "start": "python app.py",
+    "test": "python -m unittest tests/test_app.py"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "keywords": [
+    "flask",
+    "scikit-learn",
+    "pandas",
+    "matplotlib",
+    "machine-learning"
+  ],
+  "author": "",
+  "license": "ISC"
+}
