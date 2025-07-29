@@ -1,0 +1,3 @@
+This directory will store the serialized machine learning models.
+
+For example, after training, a file named `email_optimizer_model.joblib` would be saved here. The application will then load this pre-trained model on startup to make predictions without needing to retrain every time.
